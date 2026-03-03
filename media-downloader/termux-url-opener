@@ -1,0 +1,35 @@
+#!/bin/bash
+# Termux URL Opener — handles shared URLs from Android apps
+# Supports downloading video or extracting audio (MP3)
+
+url="$1"
+
+echo "========================================="
+echo "  Termux Media Downloader"
+echo "========================================="
+echo ""
+echo "URL: $url"
+echo ""
+echo "Choose format:"
+echo "  1) Video (best quality)"
+echo "  2) Audio (MP3)"
+echo ""
+read -r -p "Enter choice [1/2]: " choice
+
+case "$choice" in
+    1)
+        echo "⬇️  Downloading video..."
+        yt-dlp -f "bestvideo+bestaudio/best" "$url" -o "$HOME/storage/downloads/%(title)s.%(ext)s"
+        ;;
+    2)
+        echo "🎵 Extracting audio..."
+        yt-dlp -x --audio-format mp3 "$url" -o "$HOME/storage/downloads/%(title)s.%(ext)s"
+        ;;
+    *)
+        echo "Invalid choice. Defaulting to video..."
+        yt-dlp -f "bestvideo+bestaudio/best" "$url" -o "$HOME/storage/downloads/%(title)s.%(ext)s"
+        ;;
+esac
+
+echo ""
+echo "✅ Done! File saved to ~/storage/downloads/"

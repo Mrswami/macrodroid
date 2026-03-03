@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: ShellCheck Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck on all shell scripts
+        run: |
+          echo "## 🔍 ShellCheck Results" >> $GITHUB_STEP_SUMMARY
+          SCRIPTS=$(find . -name "*.sh" -o -name "termux-url-opener" | sort)
+          FAILED=0
+          for script in $SCRIPTS; do
+            echo "Checking $script..."
+            if shellcheck "$script"; then
+              echo "- ✅ \`$script\` — passed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ \`$script\` — issues found" >> $GITHUB_STEP_SUMMARY
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
+            echo "> Some scripts have linting issues. See the logs above for details." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> [!NOTE]" >> $GITHUB_STEP_SUMMARY
+            echo "> All scripts passed ShellCheck! 🎉" >> $GITHUB_STEP_SUMMARY
+          fi
