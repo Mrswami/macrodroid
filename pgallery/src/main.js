@@ -63,11 +63,12 @@ function renderLoginPage() {
         errorEl.classList.add('hidden')
 
         try {
-            await loginWithCredentials(email, pass) // also saves token + region internally
+            await loginWithCredentials(email, pass) // saves token + region internally
             window.location.reload()
         } catch (err) {
-            errorEl.textContent = err.message
+            errorEl.textContent = '\u274c ' + err.message
             errorEl.classList.remove('hidden')
+            errorEl.style.cssText = 'color:#f87171;padding:12px;background:rgba(248,113,113,0.1);border-radius:8px;margin-bottom:8px;display:block;'
             btn.disabled = false
             btn.textContent = 'Sign In'
         }
