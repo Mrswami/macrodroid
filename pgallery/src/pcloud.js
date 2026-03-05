@@ -90,17 +90,29 @@ export async function searchFiles(query, params = {}) {
 
 export async function getFileLink(fileId) {
     try {
-        const data = await apiCall('getfilelink', { fileid: fileId })
+        // Adding referer:0 to tell pCloud to skip referer domain checks
+        const data = await apiCall('getfilelink', { fileid: fileId, referer: 0 })
         return `https://${data.hosts[0]}${data.path}`
     } catch (e) {
         console.error('[getFileLink] failed for fileid:', fileId, e)
+        if (e.message.includes('7010')) {
+            throw new Error('pCloud blocked this link (error 7010). Please check your pCloud "Direct Link" settings at my.pcloud.com.')
+        }
         throw e
     }
 }
 
 export async function getVideoLink(fileId) {
-    const data = await apiCall('getvideolink', { fileid: fileId, streaming: 1 })
-    return `https://${data.hosts[0]}${data.path}`
+    try {
+        const data = await apiCall('getvideolink', { fileid: fileId, streaming: 1, referer: 0 })
+        return `https://${data.hosts[0]}${data.path}`
+    } catch (e) {
+        console.error('[getVideoLink] failed for fileid:', fileId, e)
+        if (e.message.includes('7010')) {
+            throw new Error('pCloud blocked this link (error 7010). Please check your pCloud "Direct Link" settings at my.pcloud.com.')
+        }
+        throw e
+    }
 }
 
 export function getThumbUrl(fileId, size = '400x400') {
