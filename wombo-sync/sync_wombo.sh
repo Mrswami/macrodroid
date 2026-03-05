@@ -7,7 +7,7 @@
 # Google Drive destination folder: "My Drive/Wombo Art"
 
 WOMBO_LOCAL="/storage/emulated/0/Pictures/Dream"
-GDRIVE_DEST="gdrive:Photos/Dream"
+GDRIVE_DEST="gdrive:→Photos/Dream"
 LOG_FILE="$HOME/wombo-sync.log"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Wombo sync..." | tee -a "$LOG_FILE"
