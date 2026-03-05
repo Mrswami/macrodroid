@@ -323,16 +323,24 @@ async function openLightbox(item, type) {
         const caption = document.createElement('div'); caption.className = 'lightbox-caption'; caption.textContent = item.name
         let media
         if (type === 'video') {
-            media = document.createElement('video'); media.src = url; media.controls = true; media.autoplay = true; media.playsInline = true
+            media = document.createElement('video');
+            media.src = url;
+            media.controls = true;
+            media.autoplay = true;
+            media.playsInline = true;
+            media.referrerPolicy = 'no-referrer';
         } else if (type === 'audio') {
             media = document.createElement('div');
             media.className = 'audio-player-container';
             media.innerHTML = `
                 <div class="audio-icon-large">🎵</div>
-                <audio src="${url}" controls autoplay></audio>
+                <audio src="${url}" controls autoplay referrerpolicy="no-referrer"></audio>
             `;
         } else {
-            media = document.createElement('img'); media.src = url; media.alt = item.name
+            media = document.createElement('img');
+            media.src = url;
+            media.alt = item.name;
+            media.referrerPolicy = 'no-referrer';
         }
         media.className = media.className || 'lightbox-media'
         lb.append(closeBtn, media, caption); document.body.appendChild(lb)
