@@ -303,12 +303,21 @@ function makeCard(item) {
 
 // ── Open file in new tab ────────────────────────────────────────────────────────
 async function openInTab(item) {
+    // Open blank window FIRST (synchronous, before any awaits) so Firefox
+    // treats it as a trusted gesture and doesn't block it as a popup.
+    const newWin = window.open('', '_blank')
     showLoader(true)
     try {
         const id = item.fileid || item.id
         const url = isVideo(item.name) ? await getVideoLink(id) : await getFileLink(id)
-        window.open(url, '_blank')
+        if (newWin) {
+            newWin.location.href = url
+        } else {
+            // Fallback if popup was still blocked (user has strict settings)
+            window.location.href = url
+        }
     } catch (e) {
+        if (newWin) newWin.close()
         showFolderError('Could not open file: ' + e.message)
     } finally {
         showLoader(false)
