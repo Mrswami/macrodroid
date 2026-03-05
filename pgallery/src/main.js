@@ -31,6 +31,7 @@ async function init() {
 
 // ── Login Page ─────────────────────────────────────────────────────────────────
 function renderLoginPage() {
+    gallery.classList.remove('grid-container') // Prevent grid from crushing the login card
     gallery.innerHTML = `
     <div class="login-page">
       <div class="login-card">
@@ -131,6 +132,7 @@ function renderBreadcrumb() {
 
 // ── Gallery Rendering ──────────────────────────────────────────────────────────
 function renderGallery() {
+    gallery.classList.add('grid-container') // Ensure grid is active for media
     gallery.innerHTML = ''
 
     if (state.files.length === 0) {
