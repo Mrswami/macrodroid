@@ -21,7 +21,7 @@ jobs:
       - name: Run ShellCheck on all shell scripts
         run: |
           echo "## 🔍 ShellCheck Results" >> $GITHUB_STEP_SUMMARY
-          SCRIPTS=$(find . -name "*.sh" -o -name "termux-url-opener" | sort)
+          SCRIPTS=$(find . -not -path "*/node_modules/*" \( -name "*.sh" -o -name "termux-url-opener" \) | sort)
           FAILED=0
           for script in $SCRIPTS; do
             echo "Checking $script..."
