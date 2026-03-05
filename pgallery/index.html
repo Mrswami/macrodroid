@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pGallery - pCloud Browser</title>
+    <meta name="description" content="No nonsense pCloud Media Gallery PWA" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div class="logo">pGallery</div>
+        <div id="auth-status"></div>
+      </header>
+      <main id="content">
+        <div id="loader" class="hidden">Loading...</div>
+        <div id="gallery" class="grid-container"></div>
+      </main>
+      <nav id="bottom-nav">
+        <!-- Navigation buttons will be injected here -->
+      </nav>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

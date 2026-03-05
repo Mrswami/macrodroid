@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "lucide": "^0.577.0",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}
