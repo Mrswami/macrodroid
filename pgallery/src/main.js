@@ -273,7 +273,7 @@ function makeCard(item) {
           <div class="card-overlay"><span class="card-filename">${item.name}</span></div>
           ${inGDrive ? '<span class="gdrive-badge" title="Also in Google Drive">GDrive ✅</span>' : ''}
         `
-        card.onclick = () => openLightbox(item, 'image')
+        card.onclick = () => openInTab(item)
     } else if (isVideo(item.name)) {
         inner.innerHTML = `
           <div class="card-icon vid">🎬</div>
@@ -281,7 +281,7 @@ function makeCard(item) {
           <div style="position:absolute;top:10px;right:10px;font-size:1rem">▶️</div>
           ${inGDrive ? '<span class="gdrive-badge" title="Also in Google Drive">GDrive ✅</span>' : ''}
         `
-        card.onclick = () => openLightbox(item, 'video')
+        card.onclick = () => openInTab(item)
     } else if (isAudio(item.name)) {
         inner.innerHTML = `
           <div class="card-icon aud">🎵</div>
@@ -289,26 +289,30 @@ function makeCard(item) {
           <div style="position:absolute;top:10px;right:10px;font-size:1rem">▶️</div>
           ${inGDrive ? '<span class="gdrive-badge" title="Also in Google Drive">GDrive ✅</span>' : ''}
         `
-        card.onclick = () => openLightbox(item, 'audio')
+        card.onclick = () => openInTab(item)
     } else {
         inner.innerHTML = `
           <div class="card-icon">📄</div>
           <div class="card-label">${item.name}</div>
           ${inGDrive ? '<span class="gdrive-badge" title="Also in Google Drive">GDrive ✅</span>' : ''}
         `
-        card.onclick = async () => {
-            showLoader(true)
-            try {
-                const url = await getFileLink(item.fileid || item.id)
-                window.open(url, '_blank')
-            } catch (e) {
-                showFolderError('Could not open file: ' + e.message)
-            } finally {
-                showLoader(false)
-            }
-        }
+        card.onclick = () => openInTab(item)
     }
     return card
+}
+
+// ── Open file in new tab ────────────────────────────────────────────────────────
+async function openInTab(item) {
+    showLoader(true)
+    try {
+        const id = item.fileid || item.id
+        const url = isVideo(item.name) ? await getVideoLink(id) : await getFileLink(id)
+        window.open(url, '_blank')
+    } catch (e) {
+        showFolderError('Could not open file: ' + e.message)
+    } finally {
+        showLoader(false)
+    }
 }
 
 // ── Lightbox ───────────────────────────────────────────────────────────────────
