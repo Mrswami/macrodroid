@@ -82,6 +82,11 @@ export async function listFolder(folderId = 0) {
     return data.metadata.contents
 }
 
+export async function searchFiles(query, params = {}) {
+    const data = await apiCall('search', { query, ...params })
+    return data.items
+}
+
 export async function getFileLink(fileId) {
     const data = await apiCall('getfilelink', { fileid: fileId })
     return `https://${data.hosts[0]}${data.path}`

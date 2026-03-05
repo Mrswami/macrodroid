@@ -14,16 +14,42 @@
 
 <body>
   <div id="app">
-    <header class="app-header">
-      <div class="logo">p<span>Gallery</span></div>
-      <nav id="breadcrumb" class="breadcrumb"></nav>
-      <div id="auth-status"></div>
-    </header>
+    <aside id="sidebar" class="sidebar hidden">
+      <div class="sidebar-header">
+        <div class="logo">p<span>Gallery</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="folders">
+          <span class="nav-icon">📁</span> My Drive
+        </button>
+        <button class="nav-item" data-view="recent">
+          <span class="nav-icon">🕒</span> Recent
+        </button>
+        <button class="nav-item" data-view="photos">
+          <span class="nav-icon">📸</span> Photos
+        </button>
+        <button class="nav-item" data-view="videos">
+          <span class="nav-icon">🎬</span> Videos
+        </button>
+        <button class="nav-item" data-view="duplicates">
+          <span class="nav-icon">👯</span> Duplicates
+        </button>
+      </nav>
+    </aside>
 
-    <main id="content">
-      <div id="loader" class="loader hidden">Loading…</div>
-      <div id="gallery" class="grid-container"></div>
-    </main>
+    <div class="main-layout">
+      <header class="app-header">
+        <div id="breadcrumb" class="breadcrumb"></div>
+        <div id="auth-status"></div>
+      </header>
+
+      <main id="content">
+        <div id="loader" class="loader-overlay hidden">
+          <div class="loader"></div>
+        </div>
+        <div id="gallery" class="grid-container"></div>
+      </main>
+    </div>
   </div>
 
   <script type="module" src="/src/main.js"></script>

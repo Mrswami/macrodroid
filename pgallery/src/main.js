@@ -2,7 +2,7 @@ import './style.css'
 import {
     getToken, clearToken,
     loginWithCredentials,
-    listFolder, getFileLink, getVideoLink, getThumbUrl
+    listFolder, searchFiles, getFileLink, getVideoLink, getThumbUrl
 } from './pcloud.js'
 import {
     getGDriveToken, clearGDriveToken,
@@ -14,7 +14,8 @@ const state = {
     currentFolderId: 0,
     folderName: 'My Drive',
     history: [],
-    gdriveIndex: null  // Set of lowercase filenames from Google Drive
+    gdriveIndex: null, // Set of lowercase filenames from Google Drive
+    currentView: 'folders' // 'folders', 'recent', 'photos', 'videos', 'duplicates'
 }
 
 // ── DOM Refs ───────────────────────────────────────────────────────────────────
@@ -22,16 +23,75 @@ const gallery = document.getElementById('gallery')
 const loader = document.getElementById('loader')
 const authArea = document.getElementById('auth-status')
 const breadcrumb = document.getElementById('breadcrumb')
+const sidebar = document.getElementById('sidebar')
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
 async function init() {
     if (getToken()) {
+        sidebar.classList.remove('hidden')
         renderConnectedUI()
+        initSidebar()
         // Load cached GDrive index if available
         state.gdriveIndex = loadCachedIndex()
         await loadFolder(0, 'My Drive')
     } else {
+        sidebar.classList.add('hidden')
         renderLoginPage()
+    }
+}
+
+// ── Sidebar Logic ──────────────────────────────────────────────────────────────
+function initSidebar() {
+    const navItems = document.querySelectorAll('.nav-item')
+    navItems.forEach(item => {
+        item.onclick = async () => {
+            const view = item.dataset.view
+            if (state.currentView === view && view !== 'folders') return
+
+            navItems.forEach(i => i.classList.remove('active'))
+            item.classList.add('active')
+            state.currentView = view
+
+            if (view === 'folders') {
+                state.history = []
+                await loadFolder(0, 'My Drive')
+            } else {
+                await loadVirtualView(view)
+            }
+        }
+    })
+}
+
+async function loadVirtualView(view) {
+    showLoader(true)
+    state.history = [] // Clear history for virtual views
+    breadcrumb.innerHTML = `<span class="breadcrumb-item active">${view.charAt(0).toUpperCase() + view.slice(1)}</span>`
+
+    try {
+        let items = []
+        if (view === 'recent') {
+            // pCloud doesn't have a perfect "recent" globally without a deep crawl,
+            // so we'll use a search for common media types as a proxy for now.
+            items = await searchFiles('', { sort: 'mtime_desc', limit: 50 })
+        } else if (view === 'photos') {
+            items = await searchFiles('.jpg', { limit: 100 })
+            const more = await searchFiles('.png', { limit: 100 })
+            items = [...items, ...more]
+        } else if (view === 'videos') {
+            items = await searchFiles('.mp4', { limit: 100 })
+        } else if (view === 'duplicates') {
+            // This is tricky: we'd need to search EVERYTHING to find duplicates.
+            // For now, we'll search for common images and filter by our GDrive index.
+            const allItems = await searchFiles('.jpg', { limit: 200 })
+            items = allItems.filter(i => isInGDrive(i.name, state.gdriveIndex))
+        }
+
+        renderGrid(items)
+    } catch (e) {
+        console.error('[pGallery] search error:', e)
+        showFolderError(`Could not load ${view}: ` + e.message)
+    } finally {
+        showLoader(false)
     }
 }
 
@@ -59,20 +119,15 @@ function renderLoginPage() {
 
     async function doLogin() {
         if (!email.value || !pass.value) return
-        btn.disabled = true
-        btn.textContent = 'Signing in…'
-        err.style.display = 'none'
+        btn.disabled = true; btn.textContent = 'Signing in…'; err.style.display = 'none'
         try {
             await loginWithCredentials(email.value.trim(), pass.value)
             window.location.reload()
         } catch (e) {
-            err.textContent = '❌ ' + e.message
-            err.style.display = 'block'
-            btn.disabled = false
-            btn.textContent = 'Sign In'
+            err.textContent = '❌ ' + e.message; err.style.display = 'block'
+            btn.disabled = false; btn.textContent = 'Sign In'
         }
     }
-
     btn.onclick = doLogin
     pass.onkeydown = e => { if (e.key === 'Enter') doLogin() }
 }
@@ -91,13 +146,12 @@ function renderConnectedUI() {
         <button id="logout-btn" class="btn-ghost btn-sm">Logout</button>
       </div>
     `
-
     document.getElementById('logout-btn').onclick = () => { clearToken(); window.location.reload() }
-
     if (gConnected) {
         document.getElementById('sync-gdrive-btn').onclick = () => refreshGDriveIndex()
     } else {
-        document.getElementById('connect-gdrive-btn').onclick = () => handleConnectGDrive()
+        const cBtn = document.getElementById('connect-gdrive-btn')
+        if (cBtn) cBtn.onclick = () => handleConnectGDrive()
     }
 }
 
@@ -105,15 +159,12 @@ function renderConnectedUI() {
 async function handleConnectGDrive() {
     const btn = document.getElementById('connect-gdrive-btn')
     if (!btn) return
-    btn.disabled = true
-    btn.textContent = 'Connecting…'
-
+    btn.disabled = true; btn.textContent = 'Connecting…'
     try {
         await connectGDrive()
         await refreshGDriveIndex()
     } catch (e) {
-        btn.disabled = false
-        btn.textContent = '🔗 Connect GDrive'
+        btn.disabled = false; btn.textContent = '🔗 Connect GDrive'
         showBanner(`GDrive error: ${e.message}`, true)
     }
 }
@@ -126,8 +177,13 @@ async function refreshGDriveIndex() {
         })
         showBanner(`✅ GDrive index ready — ${state.gdriveIndex.size} files`, false)
         setTimeout(() => hideBanner(), 3000)
-        renderConnectedUI()   // re-render header to show Sync button
-        renderGrid(await listFolder(state.currentFolderId))  // re-render cards with badges
+        renderConnectedUI()
+        // If we're in duplicate view, refresh it
+        if (state.currentView === 'duplicates') {
+            await loadVirtualView('duplicates')
+        } else {
+            renderGrid(await listFolder(state.currentFolderId))
+        }
     } catch (e) {
         showBanner(`GDrive error: ${e.message}`, true)
         clearGDriveToken()
@@ -164,7 +220,8 @@ function renderBreadcrumb() {
     `).join('')
 
     if (state.history.length > 0) {
-        document.getElementById('back-btn').onclick = () => {
+        const bBtn = document.getElementById('back-btn')
+        if (bBtn) bBtn.onclick = () => {
             const prev = state.history.pop()
             loadFolder(prev.id, prev.name)
         }
@@ -172,9 +229,10 @@ function renderBreadcrumb() {
 
     breadcrumb.querySelectorAll('.breadcrumb-item:not(.active)').forEach(el => {
         el.onclick = () => {
-            const idx = state.history.findIndex(h => h.id === Number(el.dataset.id))
+            const targetId = Number(el.dataset.id)
+            const idx = state.history.findIndex(h => h.id === targetId)
             state.history = state.history.slice(0, idx >= 0 ? idx : 0)
-            loadFolder(Number(el.dataset.id), el.dataset.name)
+            loadFolder(targetId, el.dataset.name)
         }
     })
 }
@@ -183,17 +241,14 @@ function renderBreadcrumb() {
 function renderGrid(items) {
     gallery.className = 'grid-container'
     gallery.innerHTML = ''
-
     if (!items || items.length === 0) {
-        gallery.innerHTML = '<p class="empty-msg">This folder is empty.</p>'
+        gallery.innerHTML = '<p class="empty-msg">No files found.</p>'
         return
     }
-
     const sorted = [...items].sort((a, b) => {
         if (a.isfolder !== b.isfolder) return a.isfolder ? -1 : 1
         return a.name.localeCompare(b.name)
     })
-
     sorted.forEach(item => gallery.appendChild(makeCard(item)))
 }
 
@@ -210,11 +265,11 @@ function makeCard(item) {
         inner.innerHTML = `<div class="card-icon">📁</div><div class="card-label">${item.name}</div>`
         card.onclick = () => {
             state.history.push({ id: state.currentFolderId, name: state.folderName })
-            loadFolder(item.folderid, item.name)
+            loadFolder(item.folderid || item.id, item.name)
         }
     } else if (isImage(item.name)) {
         inner.innerHTML = `
-          <img src="${getThumbUrl(item.fileid, '400x400')}" alt="${item.name}" loading="lazy" />
+          <img src="${getThumbUrl(item.fileid || item.id, '400x400')}" alt="${item.name}" loading="lazy" />
           <div class="card-overlay"><span class="card-filename">${item.name}</span></div>
           ${inGDrive ? '<span class="gdrive-badge" title="Also in Google Drive">GDrive ✅</span>' : ''}
         `
@@ -236,7 +291,7 @@ function makeCard(item) {
         card.onclick = async () => {
             showLoader(true)
             try {
-                const url = await getFileLink(item.fileid)
+                const url = await getFileLink(item.fileid || item.id)
                 window.open(url, '_blank')
             } catch (e) {
                 showFolderError('Could not open file: ' + e.message)
@@ -245,7 +300,6 @@ function makeCard(item) {
             }
         }
     }
-
     return card
 }
 
@@ -253,37 +307,24 @@ function makeCard(item) {
 async function openLightbox(item, type) {
     showLoader(true)
     try {
-        const url = type === 'video' ? await getVideoLink(item.fileid) : await getFileLink(item.fileid)
+        const id = item.fileid || item.id
+        const url = type === 'video' ? await getVideoLink(id) : await getFileLink(id)
         const lb = document.createElement('div')
         lb.className = 'lightbox'
-
-        const closeBtn = document.createElement('button')
-        closeBtn.className = 'lightbox-close'
-        closeBtn.innerHTML = '&#x2715;'
-        closeBtn.onclick = () => lb.remove()
-
-        const caption = document.createElement('div')
-        caption.className = 'lightbox-caption'
-        caption.textContent = item.name
-
+        const closeBtn = document.createElement('button'); closeBtn.className = 'lightbox-close'; closeBtn.innerHTML = '&#x2715;'; closeBtn.onclick = () => lb.remove()
+        const caption = document.createElement('div'); caption.className = 'lightbox-caption'; caption.textContent = item.name
         let media
         if (type === 'video') {
-            media = document.createElement('video')
-            media.src = url; media.controls = true; media.autoplay = true; media.playsInline = true
+            media = document.createElement('video'); media.src = url; media.controls = true; media.autoplay = true; media.playsInline = true
         } else {
-            media = document.createElement('img')
-            media.src = url; media.alt = item.name
+            media = document.createElement('img'); media.src = url; media.alt = item.name
         }
         media.className = 'lightbox-media'
-
-        lb.append(closeBtn, media, caption)
-        document.body.appendChild(lb)
+        lb.append(closeBtn, media, caption); document.body.appendChild(lb)
         lb.onclick = e => { if (e.target === lb) lb.remove() }
-        window.addEventListener('keydown', function esc(e) {
-            if (e.key === 'Escape') { lb.remove(); window.removeEventListener('keydown', esc) }
-        })
+        window.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { lb.remove(); window.removeEventListener('keydown', esc) } })
     } catch (e) {
-        showFolderError('Could not open file: ' + e.message)
+        showFolderError('Could not open media: ' + e.message)
     } finally {
         showLoader(false)
     }
@@ -293,32 +334,26 @@ async function openLightbox(item, type) {
 function isImage(n) { return /\.(jpg|jpeg|png|webp|gif|heic|bmp|tiff|svg)$/i.test(n) }
 function isVideo(n) { return /\.(mp4|mov|webm|mkv|m4v|avi|flv|wmv)$/i.test(n) }
 function showLoader(v) { loader.classList.toggle('hidden', !v) }
-
 let bannerEl = null
 function showBanner(msg, isError = false) {
-    if (!bannerEl) {
-        bannerEl = document.createElement('div')
-        bannerEl.id = 'info-banner'
-        document.body.appendChild(bannerEl)
-    }
-    bannerEl.textContent = msg
-    bannerEl.className = isError ? 'banner banner-error' : 'banner banner-info'
-    bannerEl.style.display = 'block'
+    if (!bannerEl) { bannerEl = document.createElement('div'); bannerEl.id = 'info-banner'; document.body.appendChild(bannerEl) }
+    bannerEl.textContent = msg; bannerEl.className = isError ? 'banner banner-error' : 'banner banner-info'; bannerEl.style.display = 'block'
 }
 function hideBanner() { if (bannerEl) bannerEl.style.display = 'none' }
-
 function showFolderError(msg) {
-    gallery.className = ''
-    gallery.innerHTML = `
+    gallery.className = ''; gallery.innerHTML = `
       <div class="error-msg">
         <p>⚠️ ${msg}</p>
         <div style="display:flex;gap:12px;justify-content:center;margin-top:20px">
-          <button id="err-retry"   class="btn-primary">Try Again</button>
+          <button id="err-retry" class="btn-primary">Try Again</button>
           <button id="err-relogin" class="btn-ghost">Re-login</button>
         </div>
       </div>
     `
-    document.getElementById('err-retry').onclick = () => loadFolder(state.currentFolderId, state.folderName)
+    document.getElementById('err-retry').onclick = () => {
+        if (state.currentView === 'folders') loadFolder(state.currentFolderId, state.folderName)
+        else loadVirtualView(state.currentView)
+    }
     document.getElementById('err-relogin').onclick = () => { clearToken(); window.location.reload() }
 }
 
