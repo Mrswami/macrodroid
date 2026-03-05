@@ -76,7 +76,7 @@ async function apiCall(endpoint, params = {}) {
     const token = getToken()
     if (!token) throw new Error('Not authenticated')
 
-    const query = new URLSearchParams({ ...params, access_token: token }).toString()
+    const query = new URLSearchParams({ ...params, auth: token }).toString()
     const res = await fetch(`${PCLOUD_API}/${endpoint}?${query}`)
     const data = await res.json()
 
@@ -116,5 +116,5 @@ export async function getVideoLink(fileId) {
  */
 export function getThumbUrl(fileId, size = '400x400') {
     const token = getToken()
-    return `${PCLOUD_API}/getthumb?fileid=${fileId}&size=${size}&access_token=${token}`
+    return `${PCLOUD_API}/getthumb?fileid=${fileId}&size=${size}&auth=${token}`
 }
