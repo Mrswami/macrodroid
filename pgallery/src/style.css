@@ -315,15 +315,17 @@ body {
     animation-delay: 0.3s;
 }
 
-position: relative;
-border-radius: var(--radius);
-overflow: hidden;
-cursor: pointer;
-background: var(--surface);
-border: 1px solid rgba(255, 255, 255, 0.05);
-transition: all 0.3s var(--ease);
-display: flex;
-flex-direction: column;
+.media-card {
+    animation: entrance 0.4s var(--ease) backwards;
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s var(--ease);
+    display: flex;
+    flex-direction: column;
 }
 
 .media-card::after {

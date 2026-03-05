@@ -196,15 +196,53 @@ async function openLightbox(item, type) {
 
         const lb = document.createElement('div')
         lb.className = 'lightbox'
-        lb.innerHTML = (type === 'video'
-            ? `<video src="${url}" controls autoplay class="lightbox-media"></video>`
-            : `<img src="${url}" alt="${item.name}" class="lightbox-media" />`)
-            + `<button class="lightbox-close" aria-label="Close">&#x2715;</button>
-         <div class="lightbox-caption">${item.name}</div>`
 
+        // Add a local loader for the media itself
+        const innerLoader = document.createElement('div')
+        innerLoader.className = 'loader'
+        innerLoader.textContent = 'Streaming...'
+        lb.appendChild(innerLoader)
+
+        const closeBtn = document.createElement('button')
+        closeBtn.className = 'lightbox-close'
+        closeBtn.innerHTML = '&#x2715;'
+        closeBtn.onclick = () => lb.remove()
+        lb.appendChild(closeBtn)
+
+        const caption = document.createElement('div')
+        caption.className = 'lightbox-caption'
+        caption.textContent = item.name
+        lb.appendChild(caption)
+
+        let mediaEl;
+        if (type === 'video') {
+            mediaEl = document.createElement('video')
+            mediaEl.src = url
+            mediaEl.controls = true
+            mediaEl.autoplay = true
+            mediaEl.playsInline = true
+        } else {
+            mediaEl = document.createElement('img')
+            mediaEl.src = url
+        }
+
+        mediaEl.className = 'lightbox-media'
+        mediaEl.onload = () => innerLoader.remove()
+        mediaEl.onloadeddata = () => innerLoader.remove()
+
+        lb.appendChild(mediaEl)
         document.body.appendChild(lb)
-        lb.querySelector('.lightbox-close').onclick = () => lb.remove()
+
         lb.onclick = e => { if (e.target === lb) lb.remove() }
+
+        // Escape key to close
+        const escHandler = e => {
+            if (e.key === 'Escape') {
+                lb.remove()
+                window.removeEventListener('keydown', escHandler)
+            }
+        }
+        window.addEventListener('keydown', escHandler)
     } catch (err) {
         showError(`Could not open file: ${err.message}`)
     } finally {
