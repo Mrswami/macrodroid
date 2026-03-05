@@ -28,32 +28,36 @@ export function clearToken() {
 
 /**
  * Logs in with email + password and returns a session token.
- * Detects if the account is in US or EU region.
+ * Automatically detects US vs EU region.
  */
 export async function loginWithCredentials(email, password) {
-    // Try US first to get location info
     const params = new URLSearchParams({
         username: email,
         password,
         getauth: 1,
-        authexpire: 0  // token never expires
+        authexpire: 0
     })
 
-    let res = await fetch(`${PCLOUD_API_DEFAULT}/userinfo?${params}`)
-    let data = await res.json()
-
-    // Handle "Wrong region" (result 4000) or check locationid
-    if (data.result === 4000 || data.locationid === 2) {
-        res = await fetch(`${PCLOUD_API_EU}/userinfo?${params}`)
+    let data
+    try {
+        let res = await fetch(`${PCLOUD_API_DEFAULT}/userinfo?${params}`)
         data = await res.json()
+
+        // If account is in EU region, retry against EU server
+        if (data.result === 4000 || data.locationid === 2) {
+            res = await fetch(`${PCLOUD_API_EU}/userinfo?${params}`)
+            data = await res.json()
+        }
+    } catch (networkErr) {
+        throw new Error(`Network error: ${networkErr.message}`)
     }
 
     if (data.result !== 0) {
-        throw new Error(data.error || 'Login failed. Please check your credentials.')
+        throw new Error(data.error || `pCloud error ${data.result}. Check your credentials.`)
     }
 
     const token = data.auth || data.token
-    if (!token) throw new Error('pCloud did not return an auth token.')
+    if (!token) throw new Error('pCloud did not return an auth token. Try again.')
 
     saveToken(token, data.locationid)
     return { token, email: data.email }
@@ -70,7 +74,7 @@ async function apiCall(endpoint, params = {}) {
     const res = await fetch(`${apiBase}/${endpoint}?${query}`)
     const data = await res.json()
 
-    // Handle session expiry or wrong region mid-session
+    // Explicit session expiry
     if (data.result === 1000) {
         clearToken()
         throw new Error('Logged out due to session expiry.')
@@ -84,7 +88,6 @@ async function apiCall(endpoint, params = {}) {
 
 /**
  * Lists the contents of a folder.
- * @param {number} folderId - 0 for root.
  */
 export async function listFolder(folderId = 0) {
     const data = await apiCall('listfolder', { folderid: folderId })
