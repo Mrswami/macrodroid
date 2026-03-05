@@ -106,27 +106,21 @@ export async function searchFiles(query, params = {}) {
 }
 
 export async function getFileLink(fileId) {
-    try {
-        // Try with basic call
-        const data = await apiCall('getfilelink', { fileid: fileId })
-        return `https://${data.hosts[0]}${data.path}`
-    } catch (e) {
-        console.error('[getFileLink] primary failed:', e)
-        // Fallback: Try with forcedownload to see if it bypasses referer checks
-        const data = await apiCall('getfilelink', { fileid: fileId, forcedownload: 1 })
-        return `https://${data.hosts[0]}${data.path}`
-    }
+    const token = getToken()
+    const region = (localStorage.getItem('pcloud_api_base') || '').includes('eapi') ? 'eu' : 'us'
+    const res = await fetch(`/api/filelink?fileid=${fileId}&auth=${encodeURIComponent(token)}&region=${region}&type=file`)
+    const data = await res.json()
+    if (data.error) throw new Error(data.error)
+    return data.url
 }
 
 export async function getVideoLink(fileId) {
-    try {
-        const data = await apiCall('getvideolink', { fileid: fileId, streaming: 1 })
-        return `https://${data.hosts[0]}${data.path}`
-    } catch (e) {
-        console.error('[getVideoLink] primary failed:', e)
-        const data = await apiCall('getvideolink', { fileid: fileId, streaming: 1, forcedownload: 1 })
-        return `https://${data.hosts[0]}${data.path}`
-    }
+    const token = getToken()
+    const region = (localStorage.getItem('pcloud_api_base') || '').includes('eapi') ? 'eu' : 'us'
+    const res = await fetch(`/api/filelink?fileid=${fileId}&auth=${encodeURIComponent(token)}&region=${region}&type=video`)
+    const data = await res.json()
+    if (data.error) throw new Error(data.error)
+    return data.url
 }
 
 export function getThumbUrl(fileId, size = '400x400') {
