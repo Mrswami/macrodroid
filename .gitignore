@@ -2,9 +2,17 @@
 .vscode/
 .idea/
 
-# OS.idea/
+# OS
 .DS_Store
-*.env
-pgallery/node_modules/
 Thumbs.db
-node_modules
+
+# Secrets (never commit)
+*.env
+.env
+
+# Dependencies
+node_modules/
+everydrive/node_modules/
+
+# Vercel
+.vercel/

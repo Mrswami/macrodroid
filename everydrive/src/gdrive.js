@@ -1,5 +1,5 @@
 /**
- * gdrive.js — Google Drive integration for pGallery
+ * gdrive.js — Google Drive integration for everyDrive
  *
  * Uses Google Identity Services (GIS) implicit OAuth flow — no backend needed.
  * Requires VITE_GOOGLE_CLIENT_ID in your .env file.
