@@ -282,6 +282,14 @@ function makeCard(item) {
           ${inGDrive ? '<span class="gdrive-badge" title="Also in Google Drive">GDrive ✅</span>' : ''}
         `
         card.onclick = () => openLightbox(item, 'video')
+    } else if (isAudio(item.name)) {
+        inner.innerHTML = `
+          <div class="card-icon aud">🎵</div>
+          <div class="card-label">${item.name}</div>
+          <div style="position:absolute;top:10px;right:10px;font-size:1rem">▶️</div>
+          ${inGDrive ? '<span class="gdrive-badge" title="Also in Google Drive">GDrive ✅</span>' : ''}
+        `
+        card.onclick = () => openLightbox(item, 'audio')
     } else {
         inner.innerHTML = `
           <div class="card-icon">📄</div>
@@ -316,10 +324,17 @@ async function openLightbox(item, type) {
         let media
         if (type === 'video') {
             media = document.createElement('video'); media.src = url; media.controls = true; media.autoplay = true; media.playsInline = true
+        } else if (type === 'audio') {
+            media = document.createElement('div');
+            media.className = 'audio-player-container';
+            media.innerHTML = `
+                <div class="audio-icon-large">🎵</div>
+                <audio src="${url}" controls autoplay></audio>
+            `;
         } else {
             media = document.createElement('img'); media.src = url; media.alt = item.name
         }
-        media.className = 'lightbox-media'
+        media.className = media.className || 'lightbox-media'
         lb.append(closeBtn, media, caption); document.body.appendChild(lb)
         lb.onclick = e => { if (e.target === lb) lb.remove() }
         window.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { lb.remove(); window.removeEventListener('keydown', esc) } })
@@ -332,7 +347,8 @@ async function openLightbox(item, type) {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function isImage(n) { return /\.(jpg|jpeg|png|webp|gif|heic|bmp|tiff|svg)$/i.test(n) }
-function isVideo(n) { return /\.(mp4|mov|webm|mkv|m4v|avi|flv|wmv)$/i.test(n) }
+function isVideo(n) { return /\.(mp4|mov|webm|mkv|m4v|avi|flv|wmv|mpg|mpeg)$/i.test(n) }
+function isAudio(n) { return /\.(mp3|wav|aac|ogg|m4a|flac)$/i.test(n) }
 function showLoader(v) { loader.classList.toggle('hidden', !v) }
 let bannerEl = null
 function showBanner(msg, isError = false) {

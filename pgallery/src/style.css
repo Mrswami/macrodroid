@@ -747,3 +747,42 @@ body {
         padding: 0 12px;
     }
 }
+
+/* ── Universal Media Support ── */
+.media-card .card-icon.aud {
+    color: #a855f7;
+    /* Purple for audio */
+}
+
+.audio-player-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    padding: 40px;
+}
+
+.audio-icon-large {
+    font-size: 8rem;
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.4));
+    animation: audPulse 2s infinite ease-in-out;
+}
+
+.audio-player-container audio {
+    width: 300px;
+    filter: invert(1) hue-rotate(180deg) brightness(1.5);
+}
+
+@keyframes audPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+}
