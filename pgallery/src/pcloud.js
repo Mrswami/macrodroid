@@ -67,7 +67,9 @@ async function apiCall(endpoint, params = {}) {
 
     // pCloud session tokens use the 'auth' parameter
     const qs = new URLSearchParams({ ...params, auth: token }).toString()
-    const res = await fetch(`${apiBase}/${endpoint}?${qs}`)
+    const res = await fetch(`${apiBase}/${endpoint}?${qs}`, {
+        referrerPolicy: 'no-referrer'
+    })
     const data = await res.json()
 
     if (data.result !== 0) {
