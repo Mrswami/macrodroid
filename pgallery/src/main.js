@@ -111,15 +111,32 @@ async function loadFolder(folderId, name = 'Folder') {
 function renderBreadcrumb() {
     if (!breadcrumb) return
     const trail = [{ id: 0, name: 'My Drive' }, ...state.history]
-    breadcrumb.innerHTML = trail.map((item, i) => `
+
+    // BACK BUTTON
+    const canGoBack = state.history.length > 0
+    const backBtn = document.createElement('button')
+    backBtn.className = `btn-back ${!canGoBack ? 'hidden' : ''}`
+    backBtn.innerHTML = '&#8592; Back'
+    backBtn.onclick = () => {
+        const prev = state.history.pop()
+        if (prev) loadFolder(prev.id, prev.name)
+    }
+
+    breadcrumb.innerHTML = ''
+    breadcrumb.appendChild(backBtn)
+
+    const trailList = document.createElement('div')
+    trailList.className = 'breadcrumb-trail'
+    trailList.innerHTML = trail.map((item, i) => `
     <span class="breadcrumb-item ${i === trail.length - 1 ? 'active' : ''}"
           data-id="${item.id}" data-name="${item.name}">
       ${item.name}
     </span>
     ${i < trail.length - 1 ? '<span class="breadcrumb-sep">/</span>' : ''}
   `).join('')
+    breadcrumb.appendChild(trailList)
 
-    breadcrumb.querySelectorAll('.breadcrumb-item:not(.active)').forEach(el => {
+    trailList.querySelectorAll('.breadcrumb-item:not(.active)').forEach(el => {
         el.addEventListener('click', () => {
             const targetId = Number(el.dataset.id)
             const targetName = el.dataset.name
