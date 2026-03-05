@@ -7,19 +7,22 @@ Auto-syncs Wombo Dream AI art from `/storage/emulated/0/Pictures/Dream/` to **Go
 ```
 /storage/emulated/0/Pictures/Dream/
     → MacroDroid triggers sync_wombo.sh
-        → rclone moves images to Google Drive (deletes from phone)
-            → Google Drive: "Photos/Dream/" 📂
+        → rclone copies new images to Google Drive
+        → Script checks for files older than 80 days → 🔔 Warning
+        → Script deletes files older than 90 days → 🗑️ Purge
 ```
 
 ## One-Time Setup
 
-### 1. Install Termux & rclone
+### 1. Install Termux & Dependencies
 
 ```bash
 # In Termux
-pkg upgrade -y && pkg install rclone -y
+pkg upgrade -y && pkg install rclone termux-api -y
 termux-setup-storage    # grant storage access
 ```
+
+*Note: You must also install the **Termux:API** app from F-Droid to receive warnings.*
 
 ### 2. Configure rclone for Google Drive
 
@@ -57,10 +60,14 @@ Create a macro in MacroDroid:
 
 | File | Purpose |
 |------|---------|
-| `sync_wombo.sh` | Moves new Wombo images to Google Drive |
+| `sync_wombo.sh` | Syncs new Wombo images to Google Drive and purges old local files |
 
 ## Notes
 
-- Uses `rclone move` so images are deleted from your phone after successful upload
-- A log is written to `~/wombo-sync.log` for debugging
-- New images only — rclone skips files already on Drive
+- Uses `rclone copy` so images stay on your phone for 90 days.
+- **Retention Policy**:
+    - **Day 0-79**: File exists on Phone + Google Drive.
+    - **Day 80-89**: Phone sends a "Purge Warning" notification.
+    - **Day 90+**: File is automatically deleted from Phone (still on Google Drive).
+- A log is written to `~/wombo-sync.log` for debugging.
+- New images only — rclone skips files already on Drive.
