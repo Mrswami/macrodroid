@@ -14,6 +14,16 @@
 </head>
 
 <body>
+  <div id="locker" class="locker-overlay hidden">
+    <div class="locker-card">
+      <div class="logo">every<span>Drive</span></div>
+      <h2>Secure Locker</h2>
+      <p>Enter your passcode to unlock your drive.</p>
+      <input type="password" id="passcode-input" placeholder="••••" maxlength="8" autofocus />
+      <div id="locker-error" class="error-text hidden">Invalid Passcode</div>
+      <button id="unlock-btn" class="btn-primary">Unlock</button>
+    </div>
+  </div>
   <div id="app">
     <aside id="sidebar" class="sidebar hidden">
       <div class="sidebar-header">

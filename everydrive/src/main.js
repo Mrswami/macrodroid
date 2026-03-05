@@ -10,6 +10,13 @@ import {
     isInGDrive, getGDriveFileId, getGDriveStreamUrl
 } from './gdrive.js'
 
+// ── Passcode ──────────────────────────────────────────────────────────────────
+const APP_PASSCODE = import.meta.env.VITE_APP_PASSCODE || ''
+const lockerKey = 'everydrive_passcode'
+function isLocked() { return !APP_PASSCODE ? false : localStorage.getItem(lockerKey) !== APP_PASSCODE }
+function savePasscode(p) { localStorage.setItem(lockerKey, p) }
+function getSavedPasscode() { return localStorage.getItem(lockerKey) || '' }
+
 // ── State ──────────────────────────────────────────────────────────────────────
 const state = {
     currentFolderId: 0,
@@ -28,6 +35,11 @@ const sidebar = document.getElementById('sidebar')
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
 async function init() {
+    if (isLocked()) {
+        showLocker(true)
+        return
+    }
+
     if (getToken()) {
         sidebar.classList.remove('hidden')
         renderConnectedUI()
@@ -399,6 +411,33 @@ function showFolderError(msg) {
         else loadVirtualView(state.currentView)
     }
     document.getElementById('err-relogin').onclick = () => { clearToken(); window.location.reload() }
+}
+
+// ── Locker Logic ──────────────────────────────────────────────────────────────
+function showLocker(v) {
+    const el = document.getElementById('locker')
+    if (!el) return
+    el.classList.toggle('hidden', !v)
+    if (v) {
+        const input = document.getElementById('passcode-input')
+        const btn = document.getElementById('unlock-btn')
+        const err = document.getElementById('locker-error')
+
+        const attempt = () => {
+            if (input.value === APP_PASSCODE) {
+                savePasscode(input.value)
+                window.location.reload()
+            } else {
+                err.classList.remove('hidden')
+                input.value = ''
+                input.focus()
+            }
+        }
+
+        btn.onclick = attempt
+        input.onkeydown = e => { if (e.key === 'Enter') attempt() }
+        input.focus()
+    }
 }
 
 // ── Start ──────────────────────────────────────────────────────────────────────

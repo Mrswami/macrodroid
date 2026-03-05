@@ -108,14 +108,16 @@ export async function searchFiles(query, params = {}) {
 export function getFileLink(fileId) {
     const token = getToken()
     const region = (localStorage.getItem('pcloud_api_base') || '').includes('eapi') ? 'eu' : 'us'
+    const passcode = localStorage.getItem('everydrive_passcode') || ''
     // Return the /api/filelink URL — browser opens it as navigation, server redirects to CDN
-    return `/api/filelink?fileid=${fileId}&auth=${encodeURIComponent(token)}&region=${region}&type=file`
+    return `/api/filelink?fileid=${fileId}&auth=${encodeURIComponent(token)}&region=${region}&type=file&passcode=${encodeURIComponent(passcode)}`
 }
 
 export function getVideoLink(fileId) {
     const token = getToken()
     const region = (localStorage.getItem('pcloud_api_base') || '').includes('eapi') ? 'eu' : 'us'
-    return `/api/filelink?fileid=${fileId}&auth=${encodeURIComponent(token)}&region=${region}&type=video`
+    const passcode = localStorage.getItem('everydrive_passcode') || ''
+    return `/api/filelink?fileid=${fileId}&auth=${encodeURIComponent(token)}&region=${region}&type=video&passcode=${encodeURIComponent(passcode)}`
 }
 
 export function getThumbUrl(fileId, size = '400x400') {

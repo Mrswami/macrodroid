@@ -22,7 +22,14 @@ function httpsGet(url) {
 }
 
 module.exports = async function handler(req, res) {
-    const { fileid, auth, region, type } = req.query
+    const { fileid, auth, region, type, passcode } = req.query
+
+    // ── Security Check ────────────────────────────────────────────────────────
+    const expectedPasscode = process.env.VITE_APP_PASSCODE || ''
+    if (expectedPasscode && passcode !== expectedPasscode) {
+        console.error(`[filelink] Unauthorized access attempt with passcode: ${passcode}`)
+        return res.status(401).send('Unauthorized: Invalid Passcode')
+    }
 
     if (!fileid || !auth) {
         return res.status(400).send('Missing fileid or auth')
