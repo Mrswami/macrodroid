@@ -1,84 +1,80 @@
 /**
- * pcloud.js — pCloud API Integration Layer
- *
- * Uses the pCloud OAuth 2.0 "implicit grant" flow (no backend needed).
- * The user logs in via the pCloud authorization page, which redirects back
- * to this app with an access_token in the URL hash.
- *
- * To get a CLIENT_ID:
- *   1. Go to https://docs.pcloud.com/my_apps/
- *   2. Create a new app.
- *   3. Set the redirect URI to your app's URL (e.g. http://localhost:5173).
- *   4. Paste the client_id below.
+ * pcloud.js — pCloud API Integration Layer (Region-Aware)
  */
 
-const PCLOUD_CLIENT_ID = import.meta.env.VITE_PCLOUD_CLIENT_ID || ''
-const PCLOUD_API = 'https://api.pcloud.com'
+const PCLOUD_API_DEFAULT = 'https://api.pcloud.com'
+const PCLOUD_API_EU = 'https://eapi.pcloud.com'
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Auth & Persistence ───────────────────────────────────────────────────────
 
 export function getToken() {
     return localStorage.getItem('pcloud_token')
 }
 
-export function saveToken(token) {
+export function getApiBase() {
+    return localStorage.getItem('pcloud_api_base') || PCLOUD_API_DEFAULT
+}
+
+export function saveToken(token, locationid = 1) {
+    const apiBase = (locationid === 2) ? PCLOUD_API_EU : PCLOUD_API_DEFAULT
     localStorage.setItem('pcloud_token', token)
+    localStorage.setItem('pcloud_api_base', apiBase)
 }
 
 export function clearToken() {
     localStorage.removeItem('pcloud_token')
+    localStorage.removeItem('pcloud_api_base')
 }
 
 /**
- * Logs in with email + password and returns a permanent auth token.
- * Calls pCloud's /userinfo?getauth=1 endpoint.
- * @param {string} email
- * @param {string} password
- * @returns {Promise<{token: string, email: string}>}
+ * Logs in with email + password and returns a session token.
+ * Detects if the account is in US or EU region.
  */
 export async function loginWithCredentials(email, password) {
+    // Try US first to get location info
     const params = new URLSearchParams({
         username: email,
         password,
         getauth: 1,
-        logout: 1,
-        username2: email,
         authexpire: 0  // token never expires
     })
-    const res = await fetch(`${PCLOUD_API}/userinfo?${params}`)
-    const data = await res.json()
+
+    let res = await fetch(`${PCLOUD_API_DEFAULT}/userinfo?${params}`)
+    let data = await res.json()
+
+    // Handle "Wrong region" (result 4000) or check locationid
+    if (data.result === 4000 || data.locationid === 2) {
+        res = await fetch(`${PCLOUD_API_EU}/userinfo?${params}`)
+        data = await res.json()
+    }
 
     if (data.result !== 0) {
         throw new Error(data.error || 'Login failed. Please check your credentials.')
     }
 
-    const token = data.token || data.auth
+    const token = data.auth || data.token
     if (!token) throw new Error('pCloud did not return an auth token.')
 
+    saveToken(token, data.locationid)
     return { token, email: data.email }
 }
-
-/**
- * No-op: kept for API compatibility, not needed with direct login.
- */
-export function redirectToOAuth() {
-    console.warn('redirectToOAuth: not used in direct-login mode')
-}
-
-/**
- * No-op: kept for API compatibility.
- */
-export function handleOAuthRedirect() { return null }
 
 // ── API Calls ──────────────────────────────────────────────────────────────────
 
 async function apiCall(endpoint, params = {}) {
     const token = getToken()
+    const apiBase = getApiBase()
     if (!token) throw new Error('Not authenticated')
 
     const query = new URLSearchParams({ ...params, auth: token }).toString()
-    const res = await fetch(`${PCLOUD_API}/${endpoint}?${query}`)
+    const res = await fetch(`${apiBase}/${endpoint}?${query}`)
     const data = await res.json()
+
+    // Handle session expiry or wrong region mid-session
+    if (data.result === 1000) {
+        clearToken()
+        throw new Error('Logged out due to session expiry.')
+    }
 
     if (data.result !== 0) {
         throw new Error(data.error || `API error: ${data.result}`)
@@ -107,7 +103,7 @@ export async function getFileLink(fileId) {
  * Gets a direct streaming link for a video.
  */
 export async function getVideoLink(fileId) {
-    const data = await apiCall('getvideolink', { fileid: fileId })
+    const data = await apiCall('getvideolink', { fileid: fileId, streaming: 1 })
     return `https://${data.hosts[0]}${data.path}`
 }
 
@@ -116,5 +112,9 @@ export async function getVideoLink(fileId) {
  */
 export function getThumbUrl(fileId, size = '400x400') {
     const token = getToken()
-    return `${PCLOUD_API}/getthumb?fileid=${fileId}&size=${size}&auth=${token}`
+    const apiBase = getApiBase()
+    return `${apiBase}/getthumb?fileid=${fileId}&size=${size}&auth=${token}`
 }
+
+export function redirectToOAuth() { }
+export function handleOAuthRedirect() { return null }
