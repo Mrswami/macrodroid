@@ -24,7 +24,7 @@ fi
 # 2. Sync to Google Drive (Copy, not Move)
 rclone copy \
     --transfers 4 \
-    --checkcopy-workers 4 \
+    --checkers 4 \
     --log-file "$LOG_FILE" \
     --log-level INFO \
     "$WOMBO_LOCAL" "$GDRIVE_DEST"
