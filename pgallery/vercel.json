@@ -1,0 +1,27 @@
+{
+    "rewrites": [
+        {
+            "source": "/pcloud-us/:path*",
+            "destination": "https://api.pcloud.com/:path*"
+        },
+        {
+            "source": "/pcloud-eu/:path*",
+            "destination": "https://eapi.pcloud.com/:path*"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ],
+    "headers": [
+        {
+            "source": "/pcloud-(us|eu)/(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "no-store"
+                }
+            ]
+        }
+    ]
+}
