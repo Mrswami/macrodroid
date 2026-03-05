@@ -65,9 +65,16 @@ async function apiCall(endpoint, params = {}) {
     const apiBase = getApiBase()
     if (!token) throw new Error('Not authenticated')
 
-    // pCloud session tokens use the 'auth' parameter
-    const qs = new URLSearchParams({ ...params, auth: token }).toString()
-    const res = await fetch(`${apiBase}/${endpoint}?${qs}`, {
+    // Switch to POST to potentially bypass URL-based referer filters
+    const formData = new FormData()
+    formData.append('auth', token)
+    for (const [k, v] of Object.entries(params)) {
+        formData.append(k, v)
+    }
+
+    const res = await fetch(`${apiBase}/${endpoint}`, {
+        method: 'POST',
+        body: formData,
         referrerPolicy: 'no-referrer'
     })
     const data = await res.json()
@@ -92,28 +99,25 @@ export async function searchFiles(query, params = {}) {
 
 export async function getFileLink(fileId) {
     try {
-        // Adding referer:0 to tell pCloud to skip referer domain checks
-        const data = await apiCall('getfilelink', { fileid: fileId, referer: 0 })
+        // Try with basic call
+        const data = await apiCall('getfilelink', { fileid: fileId })
         return `https://${data.hosts[0]}${data.path}`
     } catch (e) {
-        console.error('[getFileLink] failed for fileid:', fileId, e)
-        if (e.message.includes('7010')) {
-            throw new Error('pCloud blocked this link (error 7010). Please check your pCloud "Direct Link" settings at my.pcloud.com.')
-        }
-        throw e
+        console.error('[getFileLink] primary failed:', e)
+        // Fallback: Try with forcedownload to see if it bypasses referer checks
+        const data = await apiCall('getfilelink', { fileid: fileId, forcedownload: 1 })
+        return `https://${data.hosts[0]}${data.path}`
     }
 }
 
 export async function getVideoLink(fileId) {
     try {
-        const data = await apiCall('getvideolink', { fileid: fileId, streaming: 1, referer: 0 })
+        const data = await apiCall('getvideolink', { fileid: fileId, streaming: 1 })
         return `https://${data.hosts[0]}${data.path}`
     } catch (e) {
-        console.error('[getVideoLink] failed for fileid:', fileId, e)
-        if (e.message.includes('7010')) {
-            throw new Error('pCloud blocked this link (error 7010). Please check your pCloud "Direct Link" settings at my.pcloud.com.')
-        }
-        throw e
+        console.error('[getVideoLink] primary failed:', e)
+        const data = await apiCall('getvideolink', { fileid: fileId, streaming: 1, forcedownload: 1 })
+        return `https://${data.hosts[0]}${data.path}`
     }
 }
 
