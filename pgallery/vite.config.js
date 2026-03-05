@@ -7,9 +7,9 @@ export default defineConfig({
             registerType: 'autoUpdate',
             includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
             manifest: {
-                name: 'pGallery',
-                short_name: 'pGallery',
-                description: 'No nonsense pCloud Media Browser',
+                name: 'everyDrive',
+                short_name: 'everyDrive',
+                description: 'Smart Combined pCloud & Google Drive Media Browser',
                 theme_color: '#000000',
                 icons: [
                     {

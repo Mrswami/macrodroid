@@ -325,9 +325,9 @@ function openInTab(item) {
     }
 
     if (streamUrl) {
-        console.log(`[pGallery] Streaming "${item.name}" from GDrive ✅`)
+        console.log(`[everyDrive] Streaming "${item.name}" from GDrive ✅`)
     } else {
-        console.log(`[pGallery] Opening "${item.name}" via pCloud redirect`)
+        console.log(`[everyDrive] Opening "${item.name}" via pCloud redirect`)
     }
 }
 
