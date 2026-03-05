@@ -102,7 +102,14 @@ async function loadFolder(folderId, name = 'Folder') {
         renderBreadcrumb()
         renderGallery()
     } catch (err) {
-        showError(err.message)
+        // Only force re-login on explicit session expiry
+        const isExpired = err.message.includes('session expiry') || err.message.includes('Not authenticated')
+        if (isExpired) {
+            clearToken()
+            window.location.reload()
+        } else {
+            showError(err.message)
+        }
     } finally {
         toggleLoader(false)
     }
@@ -272,20 +279,18 @@ function isImage(name) { return /\.(jpg|jpeg|png|webp|gif|heic)$/i.test(name) }
 function isVideo(name) { return /\.(mp4|mov|webm|mkv|m4v)$/i.test(name) }
 function toggleLoader(show) { loader.classList.toggle('hidden', !show) }
 function showError(msg) {
-    const isAuthError = msg.toLowerCase().includes('token') || msg.toLowerCase().includes('login')
+    gallery.classList.remove('grid-container')
     gallery.innerHTML = `
     <div class="error-msg">
       <p>&#9888;&#65039; ${msg}</p>
-      ${isAuthError ? '<button id="error-logout" class="btn-primary" style="margin-top: 20px;">Re-login</button>' : ''}
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:20px;">
+        <button id="error-retry" class="btn-primary">Try Again</button>
+        <button id="error-relogin" class="btn-ghost">Log In Again</button>
+      </div>
     </div>
   `
-    if (isAuthError) {
-        const btn = document.getElementById('error-logout')
-        if (btn) btn.onclick = () => {
-            clearToken()
-            window.location.reload()
-        }
-    }
+    document.getElementById('error-retry').onclick = () => loadFolder(state.currentFolderId, state.folderName)
+    document.getElementById('error-relogin').onclick = () => { clearToken(); window.location.reload() }
 }
 
 // ── Start ──────────────────────────────────────────────────────────────────────
