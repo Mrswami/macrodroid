@@ -71,6 +71,7 @@ async function apiCall(endpoint, params = {}) {
     const data = await res.json()
 
     if (data.result !== 0) {
+        console.error(`[pCloud API] Error in ${endpoint}:`, data)
         throw new Error(data.error || `API error ${data.result}`)
     }
     return data
@@ -88,8 +89,13 @@ export async function searchFiles(query, params = {}) {
 }
 
 export async function getFileLink(fileId) {
-    const data = await apiCall('getfilelink', { fileid: fileId })
-    return `https://${data.hosts[0]}${data.path}`
+    try {
+        const data = await apiCall('getfilelink', { fileid: fileId })
+        return `https://${data.hosts[0]}${data.path}`
+    } catch (e) {
+        console.error('[getFileLink] failed for fileid:', fileId, e)
+        throw e
+    }
 }
 
 export async function getVideoLink(fileId) {
