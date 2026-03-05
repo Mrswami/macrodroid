@@ -21,8 +21,8 @@ fi
 # Count new files before sync
 NEW_COUNT=$(rclone copy --dry-run "$WOMBO_LOCAL" "$GDRIVE_DEST" 2>&1 | grep -c "Copied")
 
-# Copy (not move) so originals stay on phone until you decide to delete
-rclone copy \
+# Move so files are deleted from phone after successful upload
+rclone move \
     --transfers 4 \
     --checkcopy-workers 4 \
     --log-file "$LOG_FILE" \

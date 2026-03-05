@@ -7,7 +7,7 @@ Auto-syncs Wombo Dream AI art from `/storage/emulated/0/Pictures/Dream/` to **Go
 ```
 /storage/emulated/0/Pictures/Dream/
     → MacroDroid triggers sync_wombo.sh
-        → rclone copies new images to Google Drive
+        → rclone moves images to Google Drive (deletes from phone)
             → Google Drive: "Photos/Dream/" 📂
 ```
 
@@ -57,10 +57,10 @@ Create a macro in MacroDroid:
 
 | File | Purpose |
 |------|---------|
-| `sync_wombo.sh` | Copies new Wombo images to Google Drive |
+| `sync_wombo.sh` | Moves new Wombo images to Google Drive |
 
 ## Notes
 
-- Uses `rclone copy` (not move) so originals stay on your phone
+- Uses `rclone move` so images are deleted from your phone after successful upload
 - A log is written to `~/wombo-sync.log` for debugging
 - New images only — rclone skips files already on Drive
