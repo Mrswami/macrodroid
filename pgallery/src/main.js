@@ -98,17 +98,29 @@ function renderGallery() {
         card.className = `media-card ${item.isfolder ? 'folder-card' : 'file-card'}`
 
         if (item.isfolder) {
-            card.innerHTML = `<span>📁 ${item.name}</span>`
+            card.innerHTML = `
+        <div class="folder-icon" style="font-size: 2rem;">📁</div>
+        <span>${item.name}</span>
+      `
             card.onclick = () => {
                 state.history.push(state.currentFolderId)
                 state.currentFolderId = item.folderid
                 loadFolder(item.folderid)
             }
         } else if (isImage(item.name)) {
-            card.innerHTML = `<img src="${PCLOUD_API}/getthumb?fileid=${item.fileid}&size=400x400&access_token=${state.token}" alt="${item.name}">`
+            card.innerHTML = `
+        <img src="${PCLOUD_API}/getthumb?fileid=${item.fileid}&size=400x400&access_token=${state.token}" alt="${item.name}" loading="lazy">
+        <div class="type-icon">🖼️</div>
+      `
             card.onclick = () => openMedia(item)
         } else if (isVideo(item.name)) {
-            card.innerHTML = `<div class="vid-placeholder">🎬 ${item.name}</div>`
+            card.innerHTML = `
+        <div class="vid-placeholder">
+          <div style="font-size: 2rem;">🎬</div>
+          <span style="font-size: 0.7rem; padding: 4px; text-align: center;">${item.name}</span>
+        </div>
+        <div class="type-icon">▶️</div>
+      `
             card.onclick = () => openMedia(item)
         }
 
