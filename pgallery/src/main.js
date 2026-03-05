@@ -63,8 +63,7 @@ function renderLoginPage() {
         errorEl.classList.add('hidden')
 
         try {
-            const { token } = await loginWithCredentials(email, pass)
-            saveToken(token)
+            await loginWithCredentials(email, pass) // also saves token + region internally
             window.location.reload()
         } catch (err) {
             errorEl.textContent = err.message
