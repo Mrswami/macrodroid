@@ -211,7 +211,22 @@ async function openLightbox(item, type) {
 function isImage(name) { return /\.(jpg|jpeg|png|webp|gif|heic)$/i.test(name) }
 function isVideo(name) { return /\.(mp4|mov|webm|mkv|m4v)$/i.test(name) }
 function toggleLoader(show) { loader.classList.toggle('hidden', !show) }
-function showError(msg) { gallery.innerHTML = `<div class="error-msg">&#9888;&#65039; ${msg}</div>` }
+function showError(msg) {
+    const isAuthError = msg.toLowerCase().includes('token') || msg.toLowerCase().includes('login')
+    gallery.innerHTML = `
+    <div class="error-msg">
+      <p>&#9888;&#65039; ${msg}</p>
+      ${isAuthError ? '<button id="error-logout" class="btn-primary" style="margin-top: 20px;">Re-login</button>' : ''}
+    </div>
+  `
+    if (isAuthError) {
+        const btn = document.getElementById('error-logout')
+        if (btn) btn.onclick = () => {
+            clearToken()
+            window.location.reload()
+        }
+    }
+}
 
 // ── Start ──────────────────────────────────────────────────────────────────────
 init()
