@@ -95,6 +95,7 @@ function renderHeader() {
 // ── Folder Navigation ──────────────────────────────────────────────────────────
 async function loadFolder(folderId, name = 'Folder') {
     toggleLoader(true)
+    dbg(`loadFolder called: id=${folderId} token=${getToken()?.slice(0, 12)}... api=${getApiBase()}`)
     try {
         state.files = await listFolder(folderId)
         state.currentFolderId = folderId
@@ -102,7 +103,7 @@ async function loadFolder(folderId, name = 'Folder') {
         renderBreadcrumb()
         renderGallery()
     } catch (err) {
-        // Only force re-login on explicit session expiry
+        dbg(`ERROR: ${err.message}`, true)
         const isExpired = err.message.includes('session expiry') || err.message.includes('Not authenticated')
         if (isExpired) {
             clearToken()
@@ -291,6 +292,21 @@ function showError(msg) {
   `
     document.getElementById('error-retry').onclick = () => loadFolder(state.currentFolderId, state.folderName)
     document.getElementById('error-relogin').onclick = () => { clearToken(); window.location.reload() }
+}
+
+// ── Debug Bar ─────────────────────────────────────────────────────────────────
+function dbg(msg, isError = false) {
+    console.log('[pGallery]', msg)
+    let bar = document.getElementById('debug-bar')
+    if (!bar) {
+        bar = document.createElement('div')
+        bar.id = 'debug-bar'
+        bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#0f1;color:#000;padding:8px 12px;font:12px monospace;z-index:9999;max-height:80px;overflow:auto;'
+        document.body.appendChild(bar)
+    }
+    bar.style.background = isError ? '#f44' : '#0f1'
+    bar.style.color = isError ? '#fff' : '#000'
+    bar.textContent = msg
 }
 
 // ── Start ──────────────────────────────────────────────────────────────────────
