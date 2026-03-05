@@ -2,7 +2,9 @@
 .vscode/
 .idea/
 
-# OS
+# OS.idea/
 .DS_Store
+*.env
+pgallery/node_modules/
 Thumbs.db
 node_modules

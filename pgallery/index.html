@@ -1,26 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pGallery - pCloud Browser</title>
-    <meta name="description" content="No nonsense pCloud Media Gallery PWA" />
-    <link rel="stylesheet" href="/src/style.css" />
-  </head>
-  <body>
-    <div id="app">
-      <header>
-        <div class="logo">pGallery</div>
-        <div id="auth-status"></div>
-      </header>
-      <main id="content">
-        <div id="loader" class="hidden">Loading...</div>
-        <div id="gallery" class="grid-container"></div>
-      </main>
-      <nav id="bottom-nav">
-        <!-- Navigation buttons will be injected here -->
-      </nav>
-    </div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pGallery — pCloud Browser</title>
+  <meta name="description" content="No-nonsense pCloud media gallery PWA" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="logo">p<span>Gallery</span></div>
+      <nav id="breadcrumb" class="breadcrumb"></nav>
+      <div id="auth-status"></div>
+    </header>
+
+    <main id="content">
+      <div id="loader" class="loader hidden">Loading…</div>
+      <div id="gallery" class="grid-container"></div>
+    </main>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
 </html>
