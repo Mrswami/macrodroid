@@ -30,39 +30,45 @@ export function clearToken() {
 }
 
 /**
- * Redirects the user to pCloud's OAuth 2.0 authorization page.
- * On success, pCloud redirects back to `redirect_uri` with `#access_token=...`
+ * Logs in with email + password and returns a permanent auth token.
+ * Calls pCloud's /userinfo?getauth=1 endpoint.
+ * @param {string} email
+ * @param {string} password
+ * @returns {Promise<{token: string, email: string}>}
  */
-export function redirectToOAuth() {
-    if (!PCLOUD_CLIENT_ID) {
-        alert('Missing pCloud Client ID. Please set VITE_PCLOUD_CLIENT_ID in your .env file.')
-        return
+export async function loginWithCredentials(email, password) {
+    const params = new URLSearchParams({
+        username: email,
+        password,
+        getauth: 1,
+        logout: 1,
+        username2: email,
+        authexpire: 0  // token never expires
+    })
+    const res = await fetch(`${PCLOUD_API}/userinfo?${params}`)
+    const data = await res.json()
+
+    if (data.result !== 0) {
+        throw new Error(data.error || 'Login failed. Please check your credentials.')
     }
-    const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname)
-    const url = `https://my.pcloud.com/oauth2/authorize?client_id=${PCLOUD_CLIENT_ID}&response_type=token&redirect_uri=${redirectUri}`
-    window.location.href = url
+
+    const token = data.token || data.auth
+    if (!token) throw new Error('pCloud did not return an auth token.')
+
+    return { token, email: data.email }
 }
 
 /**
- * Checks if the URL hash contains an OAuth access_token from a redirect.
- * Saves the token and cleans the hash from the URL.
- * @returns {string|null} The token, if found.
+ * No-op: kept for API compatibility, not needed with direct login.
  */
-export function handleOAuthRedirect() {
-    const hash = window.location.hash
-    if (!hash) return null
-
-    const params = new URLSearchParams(hash.substring(1))
-    const token = params.get('access_token') || params.get('token')
-
-    if (token) {
-        saveToken(token)
-        // Clean the URL
-        history.replaceState(null, '', window.location.pathname)
-        return token
-    }
-    return null
+export function redirectToOAuth() {
+    console.warn('redirectToOAuth: not used in direct-login mode')
 }
+
+/**
+ * No-op: kept for API compatibility.
+ */
+export function handleOAuthRedirect() { return null }
 
 // ── API Calls ──────────────────────────────────────────────────────────────────
 
