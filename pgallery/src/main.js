@@ -233,6 +233,17 @@ function makeCard(item) {
           <div class="card-label">${item.name}</div>
           ${inGDrive ? '<span class="gdrive-badge" title="Also in Google Drive">GDrive ✅</span>' : ''}
         `
+        card.onclick = async () => {
+            showLoader(true)
+            try {
+                const url = await getFileLink(item.fileid)
+                window.open(url, '_blank')
+            } catch (e) {
+                showFolderError('Could not open file: ' + e.message)
+            } finally {
+                showLoader(false)
+            }
+        }
     }
 
     return card
@@ -279,8 +290,8 @@ async function openLightbox(item, type) {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-function isImage(n) { return /\.(jpg|jpeg|png|webp|gif|heic)$/i.test(n) }
-function isVideo(n) { return /\.(mp4|mov|webm|mkv|m4v)$/i.test(n) }
+function isImage(n) { return /\.(jpg|jpeg|png|webp|gif|heic|bmp|tiff|svg)$/i.test(n) }
+function isVideo(n) { return /\.(mp4|mov|webm|mkv|m4v|avi|flv|wmv)$/i.test(n) }
 function showLoader(v) { loader.classList.toggle('hidden', !v) }
 
 let bannerEl = null
