@@ -7,14 +7,15 @@
  * Setup (2 min):
  *   1. https://console.cloud.google.com → APIs & Services → Credentials
  *   2. Create OAuth Client ID → Web Application
- *   3. Add http://localhost:5173 to Authorized JavaScript Origins
+ *   3. Add http://localhost:5173 and your Vercel domain to Authorized JavaScript Origins
  *   4. Copy Client ID → paste into .env as VITE_GOOGLE_CLIENT_ID=...
  */
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
-const SCOPE = 'https://www.googleapis.com/auth/drive.metadata.readonly'
-const INDEX_KEY = 'gdrive_index'       // localStorage key for cached file index
-const TOKEN_KEY = 'gdrive_token'       // localStorage key for OAuth token
+// Upgrade scope: need drive.readonly to get download URLs, not just metadata
+const SCOPE = 'https://www.googleapis.com/auth/drive.readonly'
+const INDEX_KEY = 'gdrive_index_v2'    // v2: stores {name, id} map
+const TOKEN_KEY = 'gdrive_token'
 
 // ── Token management ──────────────────────────────────────────────────────────
 export function getGDriveToken() { return localStorage.getItem(TOKEN_KEY) }
@@ -24,10 +25,6 @@ export function clearGDriveToken() {
 }
 
 // ── OAuth ─────────────────────────────────────────────────────────────────────
-/**
- * Triggers the Google OAuth popup and resolves with the access token.
- * Loads the GIS library dynamically if needed.
- */
 export function connectGDrive() {
     return new Promise((resolve, reject) => {
         if (!CLIENT_ID) {
@@ -61,24 +58,23 @@ export function connectGDrive() {
     })
 }
 
-// ── File Index ────────────────────────────────────────────────────────────────
+// ── File Index (v2: Map of lowercase filename → fileId) ───────────────────────
 /**
- * Fetches ALL filenames from Google Drive (all pages) and stores a
- * case-insensitive Set in memory + localStorage cache.
- * Returns the Set of lowercase filenames.
+ * Fetches ALL files from Google Drive and builds a Map: lowercaseName → fileId.
+ * Also stores a Set for backward-compat isInGDrive checks.
+ * Returns { nameToId: Map, names: Set }
  */
 export async function buildGDriveIndex(onProgress) {
     const token = getGDriveToken()
     if (!token) throw new Error('Not connected to Google Drive.')
 
-    const index = new Set()
+    const nameToId = new Map()
     let pageToken = null
-    let page = 0
 
     do {
         const params = new URLSearchParams({
             pageSize: 1000,
-            fields: 'nextPageToken,files(name)',
+            fields: 'nextPageToken,files(id,name)',
             q: 'trashed=false',
         })
         if (pageToken) params.set('pageToken', pageToken)
@@ -93,31 +89,61 @@ export async function buildGDriveIndex(onProgress) {
         }
 
         const data = await res.json()
-        data.files.forEach(f => index.add(f.name.toLowerCase()))
+        data.files.forEach(f => nameToId.set(f.name.toLowerCase(), f.id))
         pageToken = data.nextPageToken
-        page++
-        onProgress?.(index.size)
+        onProgress?.(nameToId.size)
     } while (pageToken)
 
-    // Persist as a JSON array so we can restore it across reloads
-    localStorage.setItem(INDEX_KEY, JSON.stringify([...index]))
-    return index
+    // Persist as JSON array of [name, id] pairs
+    localStorage.setItem(INDEX_KEY, JSON.stringify([...nameToId]))
+    return nameToId
 }
 
 /**
- * Load the cached GDrive file index from localStorage.
- * Returns a Set, or null if not built yet.
+ * Load the cached GDrive index from localStorage.
+ * Returns a Map (lowercaseName → fileId), or null.
  */
 export function loadCachedIndex() {
     const raw = localStorage.getItem(INDEX_KEY)
     if (!raw) return null
-    try { return new Set(JSON.parse(raw)) } catch { return null }
+    try {
+        const parsed = JSON.parse(raw)
+        // Handle both v1 (string array) and v2 ([name, id] array)
+        if (parsed.length > 0 && Array.isArray(parsed[0])) {
+            return new Map(parsed)
+        }
+        // v1 fallback: convert string[] to Map with null IDs
+        return new Map(parsed.map(name => [name, null]))
+    } catch { return null }
 }
 
 /**
  * Check if a filename exists in the GDrive index.
+ * Works with both Map (v2) and Set (legacy).
  */
 export function isInGDrive(filename, index) {
     if (!index) return false
-    return index.has(filename.toLowerCase())
+    if (index instanceof Map) return index.has(filename.toLowerCase())
+    return index.has(filename.toLowerCase()) // legacy Set
+}
+
+/**
+ * Get the Google Drive file ID for a filename, if it exists.
+ * Returns null if not found or no ID stored.
+ */
+export function getGDriveFileId(filename, index) {
+    if (!index || !(index instanceof Map)) return null
+    return index.get(filename.toLowerCase()) || null
+}
+
+/**
+ * Build a direct Google Drive stream/download URL for a file ID.
+ * Uses the Drive API media endpoint with the stored OAuth token.
+ * The browser navigates to this URL — Google streams the file.
+ */
+export function getGDriveStreamUrl(fileId) {
+    const token = getGDriveToken()
+    if (!fileId || !token) return null
+    // This URL streams the file directly from Google's CDN with auth
+    return `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&access_token=${encodeURIComponent(token)}`
 }

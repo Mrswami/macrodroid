@@ -6,7 +6,8 @@ import {
 } from './pcloud.js'
 import {
     getGDriveToken, clearGDriveToken,
-    connectGDrive, buildGDriveIndex, loadCachedIndex, isInGDrive
+    connectGDrive, buildGDriveIndex, loadCachedIndex,
+    isInGDrive, getGDriveFileId, getGDriveStreamUrl
 } from './gdrive.js'
 
 // ── State ──────────────────────────────────────────────────────────────────────
@@ -301,19 +302,32 @@ function makeCard(item) {
     return card
 }
 
-// ── Open file via server-side redirect ─────────────────────────────────────────
+// ── Open file via smart routing ───────────────────────────────────────────────
+// Priority: GDrive stream (if available) → pCloud /api/filelink redirect
 function openInTab(item) {
     const id = item.fileid || item.id
-    // getFileLink/getVideoLink now return /api/filelink URLs (synchronous)
-    // The server does the pCloud call + 302 redirect to the CDN
-    const url = isVideo(item.name) ? getVideoLink(id) : getFileLink(id)
-    // Open blank window first (sync) so Firefox doesn't block it as a popup,
-    // then immediately navigate — no await gap!
+
+    // Check if this file exists in GDrive and we have its file ID
+    const gdriveId = getGDriveFileId(item.name, state.gdriveIndex)
+    const streamUrl = gdriveId ? getGDriveStreamUrl(gdriveId) : null
+
+    // Use GDrive stream if available, else fall back to pCloud proxy redirect
+    const url = streamUrl
+        ? streamUrl
+        : isVideo(item.name) ? getVideoLink(id) : getFileLink(id)
+
+    // Open synchronously (no await) — Firefox popup blocker safe
     const newWin = window.open('about:blank', '_blank')
     if (newWin) {
         newWin.location.href = url
     } else {
         window.location.href = url
+    }
+
+    if (streamUrl) {
+        console.log(`[pGallery] Streaming "${item.name}" from GDrive ✅`)
+    } else {
+        console.log(`[pGallery] Opening "${item.name}" via pCloud redirect`)
     }
 }
 
