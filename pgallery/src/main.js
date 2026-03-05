@@ -152,8 +152,12 @@ function createCard(item) {
     const card = document.createElement('div')
     card.className = `media-card ${item.isfolder ? 'folder-card' : 'file-card'}`
 
+    const inner = document.createElement('div')
+    inner.className = 'card-inner'
+    card.appendChild(inner)
+
     if (item.isfolder) {
-        card.innerHTML = `
+        inner.innerHTML = `
       <div class="card-icon">&#128193;</div>
       <div class="card-label">${item.name}</div>
     `
@@ -162,19 +166,20 @@ function createCard(item) {
             loadFolder(item.folderid, item.name)
         }
     } else if (isImage(item.name)) {
-        card.innerHTML = `
+        inner.innerHTML = `
       <img src="${getThumbUrl(item.fileid, '400x400')}" alt="${item.name}" loading="lazy" />
       <div class="card-overlay"><span class="card-filename">${item.name}</span></div>
     `
         card.onclick = () => openLightbox(item, 'image')
     } else if (isVideo(item.name)) {
-        card.innerHTML = `
+        inner.innerHTML = `
       <div class="card-icon vid">&#127916;</div>
       <div class="card-label">${item.name}</div>
+      <div class="type-icon" style="position: absolute; top: 12px; right: 12px; font-size: 1.2rem;">▶️</div>
     `
         card.onclick = () => openLightbox(item, 'video')
     } else {
-        card.innerHTML = `
+        inner.innerHTML = `
       <div class="card-icon">&#128196;</div>
       <div class="card-label">${item.name}</div>
     `
