@@ -1,14 +1,14 @@
 # 🎨 Wombo Sync
 
-Auto-syncs Wombo Dream AI art from your phone to a dedicated **Google Drive** folder (`My Drive/Wombo Art`) using `rclone` in Termux.
+Auto-syncs Wombo Dream AI art from `/storage/emulated/0/Pictures/Dream/` to **Google Drive** → `Photos/Dream/` using `rclone` in Termux.
 
 ## Flow
 
 ```
-Wombo generates art → saved to /sdcard/Pictures/WomboDream/
+/storage/emulated/0/Pictures/Dream/
     → MacroDroid triggers sync_wombo.sh
         → rclone copies new images to Google Drive
-            → Google Drive: "Wombo Art/" 📂
+            → Google Drive: "Photos/Dream/" 📂
 ```
 
 ## One-Time Setup
@@ -50,7 +50,7 @@ chmod +x ~/bin/sync_wombo.sh
 ### 5. Automate with MacroDroid
 
 Create a macro in MacroDroid:
-- **Trigger:** File Observer → Watch `/sdcard/Pictures/WomboDream/` for `New File Created`
+- **Trigger:** File Observer → Watch `/storage/emulated/0/Pictures/Dream/` for `New File Created`
 - **Action:** Termux → Run `sync_wombo.sh`
 
 ## Files

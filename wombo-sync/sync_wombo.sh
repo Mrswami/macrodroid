@@ -6,15 +6,15 @@
 #
 # Google Drive destination folder: "My Drive/Wombo Art"
 
-WOMBO_LOCAL="$HOME/storage/pictures/WomboDream"
-GDRIVE_DEST="gdrive:Wombo Art"
+WOMBO_LOCAL="/storage/emulated/0/Pictures/Dream"
+GDRIVE_DEST="gdrive:Photos/Dream"
 LOG_FILE="$HOME/wombo-sync.log"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Wombo sync..." | tee -a "$LOG_FILE"
 
 # Check that the source directory exists
 if [ ! -d "$WOMBO_LOCAL" ]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: Wombo folder not found at $WOMBO_LOCAL" | tee -a "$LOG_FILE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: Dream folder not found at $WOMBO_LOCAL" | tee -a "$LOG_FILE"
     exit 1
 fi
 
