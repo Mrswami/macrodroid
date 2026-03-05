@@ -4,12 +4,17 @@ import {
     loginWithCredentials,
     listFolder, getFileLink, getVideoLink, getThumbUrl
 } from './pcloud.js'
+import {
+    getGDriveToken, clearGDriveToken,
+    connectGDrive, buildGDriveIndex, loadCachedIndex, isInGDrive
+} from './gdrive.js'
 
 // ── State ──────────────────────────────────────────────────────────────────────
 const state = {
     currentFolderId: 0,
     folderName: 'My Drive',
-    history: []
+    history: [],
+    gdriveIndex: null  // Set of lowercase filenames from Google Drive
 }
 
 // ── DOM Refs ───────────────────────────────────────────────────────────────────
@@ -22,6 +27,8 @@ const breadcrumb = document.getElementById('breadcrumb')
 async function init() {
     if (getToken()) {
         renderConnectedUI()
+        // Load cached GDrive index if available
+        state.gdriveIndex = loadCachedIndex()
         await loadFolder(0, 'My Drive')
     } else {
         renderLoginPage()
@@ -36,8 +43,8 @@ function renderLoginPage() {
         <div class="login-logo">p<span>Gallery</span></div>
         <p class="login-subtitle">Sign in with your pCloud account</p>
         <div class="login-form">
-          <input id="lg-email" type="email" placeholder="pCloud email" autocomplete="email" />
-          <input id="lg-pass"  type="password" placeholder="Password"  autocomplete="current-password" />
+          <input id="lg-email" type="email"     placeholder="pCloud email"  autocomplete="email" />
+          <input id="lg-pass"  type="password"  placeholder="Password"      autocomplete="current-password" />
           <div id="lg-err" class="login-error" style="display:none"></div>
           <button id="lg-btn" class="btn-primary">Sign In</button>
         </div>
@@ -55,7 +62,6 @@ function renderLoginPage() {
         btn.disabled = true
         btn.textContent = 'Signing in…'
         err.style.display = 'none'
-
         try {
             await loginWithCredentials(email.value.trim(), pass.value)
             window.location.reload()
@@ -71,17 +77,60 @@ function renderLoginPage() {
     pass.onkeydown = e => { if (e.key === 'Enter') doLogin() }
 }
 
-// ── Header (authenticated) ─────────────────────────────────────────────────────
+// ── Header ─────────────────────────────────────────────────────────────────────
 function renderConnectedUI() {
+    const gConnected = !!getGDriveToken()
     authArea.innerHTML = `
       <div class="user-badge">
-        <span>🔒 Connected</span>
-        <button id="logout-btn" class="btn-ghost">Logout</button>
+        <span>🔒 pCloud</span>
+        ${gConnected
+            ? `<span class="gdrive-connected-pill">✅ GDrive</span>
+               <button id="sync-gdrive-btn" class="btn-ghost btn-sm" title="Refresh GDrive file index">↻ Sync</button>`
+            : `<button id="connect-gdrive-btn" class="btn-ghost btn-sm">🔗 Connect GDrive</button>`
+        }
+        <button id="logout-btn" class="btn-ghost btn-sm">Logout</button>
       </div>
     `
-    document.getElementById('logout-btn').onclick = () => {
-        clearToken()
-        window.location.reload()
+
+    document.getElementById('logout-btn').onclick = () => { clearToken(); window.location.reload() }
+
+    if (gConnected) {
+        document.getElementById('sync-gdrive-btn').onclick = () => refreshGDriveIndex()
+    } else {
+        document.getElementById('connect-gdrive-btn').onclick = () => handleConnectGDrive()
+    }
+}
+
+// ── GDrive Connect / Index ────────────────────────────────────────────────────
+async function handleConnectGDrive() {
+    const btn = document.getElementById('connect-gdrive-btn')
+    if (!btn) return
+    btn.disabled = true
+    btn.textContent = 'Connecting…'
+
+    try {
+        await connectGDrive()
+        await refreshGDriveIndex()
+    } catch (e) {
+        btn.disabled = false
+        btn.textContent = '🔗 Connect GDrive'
+        showBanner(`GDrive error: ${e.message}`, true)
+    }
+}
+
+async function refreshGDriveIndex() {
+    showBanner('Building GDrive index… 0 files', false)
+    try {
+        state.gdriveIndex = await buildGDriveIndex(count => {
+            showBanner(`Building GDrive index… ${count} files`, false)
+        })
+        showBanner(`✅ GDrive index ready — ${state.gdriveIndex.size} files`, false)
+        setTimeout(() => hideBanner(), 3000)
+        renderConnectedUI()   // re-render header to show Sync button
+        renderGrid(await listFolder(state.currentFolderId))  // re-render cards with badges
+    } catch (e) {
+        showBanner(`GDrive error: ${e.message}`, true)
+        clearGDriveToken()
     }
 }
 
@@ -95,7 +144,7 @@ async function loadFolder(folderId, name) {
         renderBreadcrumb()
         renderGrid(items)
     } catch (e) {
-        console.error('[pGallery] folder load error:', e)
+        console.error('[pGallery]', e)
         showFolderError(e.message)
     } finally {
         showLoader(false)
@@ -106,10 +155,7 @@ async function loadFolder(folderId, name) {
 function renderBreadcrumb() {
     if (!breadcrumb) return
     const trail = [{ id: 0, name: 'My Drive' }, ...state.history]
-
-    const back = state.history.length > 0
-        ? `<button class="btn-back" id="back-btn">← Back</button>`
-        : ''
+    const back = state.history.length > 0 ? `<button class="btn-back" id="back-btn">← Back</button>` : ''
 
     breadcrumb.innerHTML = back + trail.map((item, i) => `
       <span class="breadcrumb-item ${i === trail.length - 1 ? 'active' : ''}"
@@ -126,15 +172,14 @@ function renderBreadcrumb() {
 
     breadcrumb.querySelectorAll('.breadcrumb-item:not(.active)').forEach(el => {
         el.onclick = () => {
-            const targetId = Number(el.dataset.id)
-            const idx = state.history.findIndex(h => h.id === targetId)
+            const idx = state.history.findIndex(h => h.id === Number(el.dataset.id))
             state.history = state.history.slice(0, idx >= 0 ? idx : 0)
-            loadFolder(targetId, el.dataset.name)
+            loadFolder(Number(el.dataset.id), el.dataset.name)
         }
     })
 }
 
-// ── Grid / Cards ──────────────────────────────────────────────────────────────
+// ── Grid / Cards ───────────────────────────────────────────────────────────────
 function renderGrid(items) {
     gallery.className = 'grid-container'
     gallery.innerHTML = ''
@@ -159,6 +204,8 @@ function makeCard(item) {
     inner.className = 'card-inner'
     card.appendChild(inner)
 
+    const inGDrive = !item.isfolder && isInGDrive(item.name, state.gdriveIndex)
+
     if (item.isfolder) {
         inner.innerHTML = `<div class="card-icon">📁</div><div class="card-label">${item.name}</div>`
         card.onclick = () => {
@@ -169,6 +216,7 @@ function makeCard(item) {
         inner.innerHTML = `
           <img src="${getThumbUrl(item.fileid, '400x400')}" alt="${item.name}" loading="lazy" />
           <div class="card-overlay"><span class="card-filename">${item.name}</span></div>
+          ${inGDrive ? '<span class="gdrive-badge" title="Also in Google Drive">GDrive ✅</span>' : ''}
         `
         card.onclick = () => openLightbox(item, 'image')
     } else if (isVideo(item.name)) {
@@ -176,10 +224,15 @@ function makeCard(item) {
           <div class="card-icon vid">🎬</div>
           <div class="card-label">${item.name}</div>
           <div style="position:absolute;top:10px;right:10px;font-size:1rem">▶️</div>
+          ${inGDrive ? '<span class="gdrive-badge" title="Also in Google Drive">GDrive ✅</span>' : ''}
         `
         card.onclick = () => openLightbox(item, 'video')
     } else {
-        inner.innerHTML = `<div class="card-icon">📄</div><div class="card-label">${item.name}</div>`
+        inner.innerHTML = `
+          <div class="card-icon">📄</div>
+          <div class="card-label">${item.name}</div>
+          ${inGDrive ? '<span class="gdrive-badge" title="Also in Google Drive">GDrive ✅</span>' : ''}
+        `
     }
 
     return card
@@ -189,10 +242,7 @@ function makeCard(item) {
 async function openLightbox(item, type) {
     showLoader(true)
     try {
-        const url = type === 'video'
-            ? await getVideoLink(item.fileid)
-            : await getFileLink(item.fileid)
-
+        const url = type === 'video' ? await getVideoLink(item.fileid) : await getFileLink(item.fileid)
         const lb = document.createElement('div')
         lb.className = 'lightbox'
 
@@ -208,22 +258,15 @@ async function openLightbox(item, type) {
         let media
         if (type === 'video') {
             media = document.createElement('video')
-            media.src = url
-            media.controls = true
-            media.autoplay = true
-            media.playsInline = true
+            media.src = url; media.controls = true; media.autoplay = true; media.playsInline = true
         } else {
             media = document.createElement('img')
-            media.src = url
-            media.alt = item.name
+            media.src = url; media.alt = item.name
         }
         media.className = 'lightbox-media'
 
-        lb.appendChild(closeBtn)
-        lb.appendChild(media)
-        lb.appendChild(caption)
+        lb.append(closeBtn, media, caption)
         document.body.appendChild(lb)
-
         lb.onclick = e => { if (e.target === lb) lb.remove() }
         window.addEventListener('keydown', function esc(e) {
             if (e.key === 'Escape') { lb.remove(); window.removeEventListener('keydown', esc) }
@@ -239,6 +282,19 @@ async function openLightbox(item, type) {
 function isImage(n) { return /\.(jpg|jpeg|png|webp|gif|heic)$/i.test(n) }
 function isVideo(n) { return /\.(mp4|mov|webm|mkv|m4v)$/i.test(n) }
 function showLoader(v) { loader.classList.toggle('hidden', !v) }
+
+let bannerEl = null
+function showBanner(msg, isError = false) {
+    if (!bannerEl) {
+        bannerEl = document.createElement('div')
+        bannerEl.id = 'info-banner'
+        document.body.appendChild(bannerEl)
+    }
+    bannerEl.textContent = msg
+    bannerEl.className = isError ? 'banner banner-error' : 'banner banner-info'
+    bannerEl.style.display = 'block'
+}
+function hideBanner() { if (bannerEl) bannerEl.style.display = 'none' }
 
 function showFolderError(msg) {
     gallery.className = ''
