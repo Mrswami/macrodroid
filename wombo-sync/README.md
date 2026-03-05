@@ -1,6 +1,6 @@
 # 🎨 Wombo Sync
 
-Auto-syncs Wombo Dream AI art from `/storage/emulated/0/Pictures/Dream/` to **Google Drive** → `→Photos/Dream/` using `rclone` in Termux.
+Auto-syncs Wombo Dream AI art from `/storage/emulated/0/Pictures/Dream/` to **Google Drive** → `Photos/Dream/` using `rclone` in Termux.
 
 ## Flow
 
@@ -8,7 +8,7 @@ Auto-syncs Wombo Dream AI art from `/storage/emulated/0/Pictures/Dream/` to **Go
 /storage/emulated/0/Pictures/Dream/
     → MacroDroid triggers sync_wombo.sh
         → rclone copies new images to Google Drive
-            → Google Drive: "→Photos/Dream/" 📂
+            → Google Drive: "Photos/Dream/" 📂
 ```
 
 ## One-Time Setup

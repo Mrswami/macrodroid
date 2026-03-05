@@ -13,6 +13,7 @@ Each project lives in its own folder with its own README, setup instructions, an
 | 🚪 **Gate Automation** | Auto-open apartment gate via Gatewise when connecting to Wi-Fi | [`gate-automation/`](gate-automation/) |
 | 🎬 **Media Downloader** | Download video/audio from shared URLs using yt-dlp in Termux | [`media-downloader/`](media-downloader/) |
 | 🎨 **Wombo Sync** | Auto-sync Wombo Dream AI art to Google Drive via MacroDroid + rclone | [`wombo-sync/`](wombo-sync/) |
+| 🧹 **Drive Org** | Maintain a clean "No Nonsense" Google Drive structure | [`drive-org/`](drive-org/) |
 
 ---
 
@@ -42,6 +43,9 @@ macrodroid/
 │   └── README.md
 ├── wombo-sync/            # 🎨 Wombo Dream → Google Drive
 │   ├── sync_wombo.sh
+│   └── README.md
+├── drive-org/             # 🧹 Google Drive Organization
+│   ├── organize_drive.sh
 │   └── README.md
 ├── .github/workflows/     # CI/CD pipeline
 │   └── ci.yml
