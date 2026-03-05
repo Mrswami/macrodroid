@@ -45,7 +45,7 @@ fi
 
 # Find and Delete files older than 90 days
 PURGE_FILES=$(find "$WOMBO_LOCAL" -type f -mtime +90)
-PURGE_COUNT=$(echo "$PURGE_FILES" | grep -v "^$" | wc -l)
+PURGE_COUNT=$(echo "$PURGE_FILES" | grep -vc "^$")
 
 if [ "$PURGE_COUNT" -gt 0 ]; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] PURGING: Deleting $PURGE_COUNT files older than 90 days..." | tee -a "$LOG_FILE"

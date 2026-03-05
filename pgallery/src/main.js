@@ -301,26 +301,19 @@ function makeCard(item) {
     return card
 }
 
-// ── Open file in new tab ────────────────────────────────────────────────────────
-async function openInTab(item) {
-    // Open blank window FIRST (synchronous, before any awaits) so Firefox
-    // treats it as a trusted gesture and doesn't block it as a popup.
-    const newWin = window.open('', '_blank')
-    showLoader(true)
-    try {
-        const id = item.fileid || item.id
-        const url = isVideo(item.name) ? await getVideoLink(id) : await getFileLink(id)
-        if (newWin) {
-            newWin.location.href = url
-        } else {
-            // Fallback if popup was still blocked (user has strict settings)
-            window.location.href = url
-        }
-    } catch (e) {
-        if (newWin) newWin.close()
-        showFolderError('Could not open file: ' + e.message)
-    } finally {
-        showLoader(false)
+// ── Open file via server-side redirect ─────────────────────────────────────────
+function openInTab(item) {
+    const id = item.fileid || item.id
+    // getFileLink/getVideoLink now return /api/filelink URLs (synchronous)
+    // The server does the pCloud call + 302 redirect to the CDN
+    const url = isVideo(item.name) ? getVideoLink(id) : getFileLink(id)
+    // Open blank window first (sync) so Firefox doesn't block it as a popup,
+    // then immediately navigate — no await gap!
+    const newWin = window.open('about:blank', '_blank')
+    if (newWin) {
+        newWin.location.href = url
+    } else {
+        window.location.href = url
     }
 }
 

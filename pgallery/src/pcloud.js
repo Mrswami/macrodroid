@@ -105,22 +105,17 @@ export async function searchFiles(query, params = {}) {
     return data.items
 }
 
-export async function getFileLink(fileId) {
+export function getFileLink(fileId) {
     const token = getToken()
     const region = (localStorage.getItem('pcloud_api_base') || '').includes('eapi') ? 'eu' : 'us'
-    const res = await fetch(`/api/filelink?fileid=${fileId}&auth=${encodeURIComponent(token)}&region=${region}&type=file`)
-    const data = await res.json()
-    if (data.error) throw new Error(data.error)
-    return data.url
+    // Return the /api/filelink URL — browser opens it as navigation, server redirects to CDN
+    return `/api/filelink?fileid=${fileId}&auth=${encodeURIComponent(token)}&region=${region}&type=file`
 }
 
-export async function getVideoLink(fileId) {
+export function getVideoLink(fileId) {
     const token = getToken()
     const region = (localStorage.getItem('pcloud_api_base') || '').includes('eapi') ? 'eu' : 'us'
-    const res = await fetch(`/api/filelink?fileid=${fileId}&auth=${encodeURIComponent(token)}&region=${region}&type=video`)
-    const data = await res.json()
-    if (data.error) throw new Error(data.error)
-    return data.url
+    return `/api/filelink?fileid=${fileId}&auth=${encodeURIComponent(token)}&region=${region}&type=video`
 }
 
 export function getThumbUrl(fileId, size = '400x400') {

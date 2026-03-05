@@ -1,11 +1,9 @@
 /**
  * Vercel Serverless Function: /api/filelink
- * 
- * Pure server-side proxy to pCloud's getfilelink + getvideolink.
- * Called with ?fileid=XXX&auth=TOKEN&region=us|eu&type=file|video
- * 
- * Because this runs in Node.js on Vercel's servers, pCloud sees
- * a clean server-to-server request with no browser Origin header.
+ *
+ * Calls pCloud getfilelink/getvideolink from Node.js (server-to-server).
+ * Then issues a 302 redirect to the CDN URL so the browser navigates
+ * directly to the file — zero browser Origin/Referer headers touch pCloud.
  */
 
 const https = require('https')
@@ -17,28 +15,17 @@ function httpsGet(url) {
             res.on('data', chunk => data += chunk)
             res.on('end', () => {
                 try { resolve(JSON.parse(data)) }
-                catch (e) { reject(new Error('Failed to parse pCloud response')) }
+                catch (e) { reject(new Error('Failed to parse pCloud response: ' + data.slice(0, 200))) }
             })
         }).on('error', reject)
     })
 }
 
 module.exports = async function handler(req, res) {
-    // Allow CORS from our own domain
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end()
-    }
-
-    const { fileid, auth, region, type } = req.method === 'POST'
-        ? await parseBody(req)
-        : req.query
+    const { fileid, auth, region, type } = req.query
 
     if (!fileid || !auth) {
-        return res.status(400).json({ error: 'Missing fileid or auth' })
+        return res.status(400).send('Missing fileid or auth')
     }
 
     const apiBase = region === 'eu'
@@ -47,32 +34,27 @@ module.exports = async function handler(req, res) {
 
     const endpoint = type === 'video' ? 'getvideolink' : 'getfilelink'
     const extra = type === 'video' ? '&streaming=1' : ''
-    const url = `${apiBase}/${endpoint}?fileid=${fileid}&auth=${auth}${extra}`
+    const url = `${apiBase}/${endpoint}?fileid=${fileid}&auth=${encodeURIComponent(auth)}${extra}`
+
+    console.log(`[filelink] calling: ${apiBase}/${endpoint}?fileid=${fileid}&region=${region}`)
 
     try {
         const data = await httpsGet(url)
+        console.log(`[filelink] pCloud response result: ${data.result}`)
 
         if (data.result !== 0) {
-            return res.status(200).json({ error: data.error, result: data.result })
+            return res.status(502).send(`pCloud error ${data.result}: ${data.error}`)
         }
 
         const fileUrl = `https://${data.hosts[0]}${data.path}`
-        return res.status(200).json({ url: fileUrl })
-    } catch (err) {
-        return res.status(500).json({ error: err.message })
-    }
-}
+        console.log(`[filelink] redirecting to: ${fileUrl.split('?')[0]}`)
 
-function parseBody(req) {
-    return new Promise((resolve) => {
-        let body = ''
-        req.on('data', chunk => body += chunk)
-        req.on('end', () => {
-            try {
-                resolve(Object.fromEntries(new URLSearchParams(body)))
-            } catch {
-                resolve({})
-            }
-        })
-    })
+        // 302 redirect — browser follows it as a navigation, no Origin header sent
+        res.setHeader('Location', fileUrl)
+        res.setHeader('Cache-Control', 'no-store')
+        return res.status(302).end()
+    } catch (err) {
+        console.error(`[filelink] error:`, err)
+        return res.status(500).send(err.message)
+    }
 }
