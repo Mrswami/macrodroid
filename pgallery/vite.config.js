@@ -25,5 +25,22 @@ export default defineConfig({
                 ]
             }
         })
-    ]
+    ],
+    server: {
+        proxy: {
+            // US region pCloud API
+            '/pcloud-us': {
+                target: 'https://api.pcloud.com',
+                changeOrigin: true,
+                rewrite: path => path.replace(/^\/pcloud-us/, '')
+            },
+            // EU region pCloud API
+            '/pcloud-eu': {
+                target: 'https://eapi.pcloud.com',
+                changeOrigin: true,
+                rewrite: path => path.replace(/^\/pcloud-eu/, '')
+            }
+        }
+    }
 })
+

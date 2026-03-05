@@ -2,12 +2,21 @@
  * pcloud.js — pCloud API Integration Layer (Region-Aware)
  */
 
+// Direct URLs used ONLY for login (before we know the region)
 const PCLOUD_API_US = 'https://api.pcloud.com'
 const PCLOUD_API_EU = 'https://eapi.pcloud.com'
+
+// Proxy paths used for ALL other API calls (routes via Vite server, strips Origin header)
+const PROXY_US = '/pcloud-us'
+const PROXY_EU = '/pcloud-eu'
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 export function getToken() { return localStorage.getItem('pcloud_token') }
 export function getApiBase() { return localStorage.getItem('pcloud_api_base') || PCLOUD_API_US }
+export function getProxyBase() {
+    const base = localStorage.getItem('pcloud_api_base') || PCLOUD_API_US
+    return base.includes('eapi') ? PROXY_EU : PROXY_US
+}
 
 export function saveToken(token, locationid = 1) {
     localStorage.setItem('pcloud_token', token)
@@ -62,20 +71,19 @@ export async function loginWithCredentials(email, password) {
 // ── Core API caller ───────────────────────────────────────────────────────────
 async function apiCall(endpoint, params = {}) {
     const token = getToken()
-    const apiBase = getApiBase()
+    const proxyBase = getProxyBase()
     if (!token) throw new Error('Not authenticated')
 
-    // Switch to POST to potentially bypass URL-based referer filters
+    // Use POST through Vite proxy — no browser Origin header reaches pCloud
     const formData = new FormData()
     formData.append('auth', token)
     for (const [k, v] of Object.entries(params)) {
         formData.append(k, v)
     }
 
-    const res = await fetch(`${apiBase}/${endpoint}`, {
+    const res = await fetch(`${proxyBase}/${endpoint}`, {
         method: 'POST',
-        body: formData,
-        referrerPolicy: 'no-referrer'
+        body: formData
     })
     const data = await res.json()
 
