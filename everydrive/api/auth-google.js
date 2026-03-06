@@ -1,17 +1,17 @@
 /**
- * Vercel Serverless Function: /api/auth-google
- * 
+ * Vercel Serverless Function: /api/auth-google (ESM)
+ *
  * Handles Google OAuth 2.0 Authorization Code exchange and Refresh Token flow.
  * Keeps the Client Secret safe on the server.
  */
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
     const { code, refresh_token, passcode, health } = req.query;
 
     if (health) {
         return res.status(200).json({
             status: 'ok',
-            message: 'Auth API is alive',
+            message: 'Auth API is alive (ESM)',
             node: process.version,
             env: {
                 has_client_id: !!process.env.VITE_GOOGLE_CLIENT_ID,
@@ -59,7 +59,7 @@ module.exports = async function handler(req, res) {
     try {
         console.log(`[auth-google] exchanging ${body.get('grant_type')}...`);
 
-        // Using native fetch (Node 18+) for better reliability on Vercel
+        // Native fetch is available in Node 18+ and Vercel ESM environment
         const response = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -81,4 +81,4 @@ module.exports = async function handler(req, res) {
             message: err.message
         });
     }
-};
+}
