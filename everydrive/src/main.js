@@ -44,33 +44,47 @@ async function init() {
         sidebar.classList.remove('hidden')
         renderConnectedUI()
         initSidebar()
-        // Load cached GDrive index if available
         state.gdriveIndex = loadCachedIndex()
-        await loadFolder(0, 'My Drive')
+
+        // Handle routing via hash
+        window.onhashchange = handleRouting
+        await handleRouting()
     } else {
         sidebar.classList.add('hidden')
         renderLoginPage()
     }
 }
 
+async function handleRouting() {
+    const hash = window.location.hash.slice(1) // remove #
+    if (!hash || hash === 'folders') {
+        state.currentView = 'folders'
+        state.history = []
+        await loadFolder(0, 'My Drive')
+    } else if (hash.startsWith('folder/')) {
+        const parts = hash.split('/')
+        const id = parts[1]
+        const name = decodeURIComponent(parts[2] || 'Folder')
+        state.currentView = 'folders'
+        await loadFolder(id, name)
+    } else {
+        state.currentView = hash
+        await loadVirtualView(hash)
+    }
+
+    // Sync sidebar active state
+    document.querySelectorAll('.nav-item').forEach(i => {
+        i.classList.toggle('active', i.dataset.view === state.currentView)
+    })
+}
+
 // ── Sidebar Logic ──────────────────────────────────────────────────────────────
 function initSidebar() {
     const navItems = document.querySelectorAll('.nav-item')
     navItems.forEach(item => {
-        item.onclick = async () => {
+        item.onclick = () => {
             const view = item.dataset.view
-            if (state.currentView === view && view !== 'folders') return
-
-            navItems.forEach(i => i.classList.remove('active'))
-            item.classList.add('active')
-            state.currentView = view
-
-            if (view === 'folders') {
-                state.history = []
-                await loadFolder(0, 'My Drive')
-            } else {
-                await loadVirtualView(view)
-            }
+            window.location.hash = view
         }
     })
 }
@@ -235,17 +249,20 @@ function renderBreadcrumb() {
     if (state.history.length > 0) {
         const bBtn = document.getElementById('back-btn')
         if (bBtn) bBtn.onclick = () => {
-            const prev = state.history.pop()
-            loadFolder(prev.id, prev.name)
+            state.history.pop()
+            const prev = state.history.pop() || { id: 0, name: 'My Drive' }
+            window.location.hash = prev.id === 0 ? 'folders' : `folder/${prev.id}/${encodeURIComponent(prev.name)}`
         }
     }
 
     breadcrumb.querySelectorAll('.breadcrumb-item:not(.active)').forEach(el => {
         el.onclick = () => {
             const targetId = Number(el.dataset.id)
-            const idx = state.history.findIndex(h => h.id === targetId)
-            state.history = state.history.slice(0, idx >= 0 ? idx : 0)
-            loadFolder(targetId, el.dataset.name)
+            if (targetId === 0) {
+                window.location.hash = 'folders'
+            } else {
+                window.location.hash = `folder/${targetId}/${encodeURIComponent(el.dataset.name)}`
+            }
         }
     })
 }
@@ -278,7 +295,7 @@ function makeCard(item) {
         inner.innerHTML = `<div class="card-icon">📁</div><div class="card-label">${item.name}</div>`
         card.onclick = () => {
             state.history.push({ id: state.currentFolderId, name: state.folderName })
-            loadFolder(item.folderid || item.id, item.name)
+            window.location.hash = `folder/${item.folderid || item.id}/${encodeURIComponent(item.name)}`
         }
     } else if (isImage(item.name)) {
         inner.innerHTML = `
@@ -318,23 +335,18 @@ function makeCard(item) {
 // Priority: GDrive stream (if available) → pCloud /api/filelink redirect
 function openInTab(item) {
     const id = item.fileid || item.id
-
-    // Check if this file exists in GDrive and we have its file ID
     const gdriveId = getGDriveFileId(item.name, state.gdriveIndex)
     const streamUrl = gdriveId ? getGDriveStreamUrl(gdriveId) : null
+    const url = streamUrl ? streamUrl : isVideo(item.name) ? getVideoLink(id) : getFileLink(id)
 
-    // Use GDrive stream if available, else fall back to pCloud proxy redirect
-    const url = streamUrl
-        ? streamUrl
-        : isVideo(item.name) ? getVideoLink(id) : getFileLink(id)
-
-    // Open synchronously (no await) — Firefox popup blocker safe
-    const newWin = window.open('about:blank', '_blank')
-    if (newWin) {
-        newWin.location.href = url
-    } else {
-        window.location.href = url
-    }
+    // Use a hidden anchor tag instead of window.open for better popup blocker bypass
+    const a = document.createElement('a')
+    a.href = url
+    a.target = '_blank'
+    a.rel = 'noreferrer'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
 
     if (streamUrl) {
         console.log(`[everyDrive] Streaming "${item.name}" from GDrive ✅`)
