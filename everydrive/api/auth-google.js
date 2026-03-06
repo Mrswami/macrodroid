@@ -6,7 +6,20 @@
  */
 
 module.exports = async function handler(req, res) {
-    const { code, refresh_token, passcode } = req.query;
+    const { code, refresh_token, passcode, health } = req.query;
+
+    if (health) {
+        return res.status(200).json({
+            status: 'ok',
+            message: 'Auth API is alive',
+            node: process.version,
+            env: {
+                has_client_id: !!process.env.VITE_GOOGLE_CLIENT_ID,
+                has_client_secret: !!process.env.GOOGLE_CLIENT_SECRET,
+                has_passcode: !!process.env.VITE_APP_PASSCODE
+            }
+        });
+    }
 
     // ── Security Check ────────────────────────────────────────────────────────
     const expectedPasscode = process.env.VITE_APP_PASSCODE || '';
