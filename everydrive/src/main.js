@@ -101,7 +101,7 @@ async function loadVirtualView(view) {
 
         renderGrid(items)
     } catch (e) {
-        console.error('[pGallery] search error:', e)
+        console.error('[everyDrive] search error:', e)
         showFolderError(`Could not load ${view}: ` + e.message)
     } finally {
         showLoader(false)
@@ -113,7 +113,7 @@ function renderLoginPage() {
     gallery.className = 'login-wrapper'
     gallery.innerHTML = `
       <div class="login-card">
-        <div class="login-logo">p<span>Gallery</span></div>
+        <div class="login-logo">every<span>Drive</span></div>
         <p class="login-subtitle">Sign in with your pCloud account</p>
         <div class="login-form">
           <input id="lg-email" type="email"     placeholder="pCloud email"  autocomplete="email" />
@@ -213,7 +213,7 @@ async function loadFolder(folderId, name) {
         renderBreadcrumb()
         renderGrid(items)
     } catch (e) {
-        console.error('[pGallery]', e)
+        console.error('[everyDrive]', e)
         showFolderError(e.message)
     } finally {
         showLoader(false)
