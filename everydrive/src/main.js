@@ -22,8 +22,9 @@ const state = {
     currentFolderId: 0,
     folderName: 'My Drive',
     history: [],
-    gdriveIndex: null, // Set of lowercase filenames from Google Drive
-    currentView: 'folders' // 'folders', 'recent', 'photos', 'videos', 'duplicates'
+    gdriveIndex: null,
+    currentView: 'folders', // 'folders', 'recent', 'photos', 'videos', 'duplicates'
+    sourceFilter: 'all'     // 'all', 'pcloud', 'gdrive'
 }
 
 // ── DOM Refs ───────────────────────────────────────────────────────────────────
@@ -89,13 +90,32 @@ async function handleRouting() {
 
 // ── Sidebar Logic ──────────────────────────────────────────────────────────────
 function initSidebar() {
-    const navItems = document.querySelectorAll('.nav-item')
-    navItems.forEach(item => {
+    // View navigation items
+    document.querySelectorAll('.nav-item[data-view]').forEach(item => {
         item.onclick = () => {
-            const view = item.dataset.view
-            window.location.hash = view
+            window.location.hash = item.dataset.view
         }
     })
+
+    // Source filter items
+    document.querySelectorAll('.source-filter').forEach(item => {
+        item.onclick = () => {
+            state.sourceFilter = item.dataset.source
+            // Update active highlight on filter buttons only
+            document.querySelectorAll('.source-filter').forEach(f => {
+                f.classList.toggle('active', f === item)
+            })
+            // Re-render the current view with the new filter applied
+            if (state.currentView === 'folders') {
+                loadFolder(state.currentFolderId, state.folderName)
+            } else {
+                loadVirtualView(state.currentView)
+            }
+        }
+    })
+
+    // Activate the default 'all' filter button
+    document.getElementById('filter-all')?.classList.add('active')
 }
 
 async function loadVirtualView(view) {
@@ -284,7 +304,26 @@ function renderGrid(items) {
         gallery.innerHTML = '<p class="empty-msg">No files found.</p>'
         return
     }
-    const sorted = [...items].sort((a, b) => {
+
+    // Apply source filter (folders always pass through so navigation isn't broken)
+    let filtered = items
+    if (state.sourceFilter !== 'all') {
+        filtered = items.filter(item => {
+            if (item.isfolder) return true // always show folders
+            const inGDrive = isInGDrive(item.name, state.gdriveIndex)
+            if (state.sourceFilter === 'gdrive') return inGDrive
+            if (state.sourceFilter === 'pcloud') return !inGDrive
+            return true
+        })
+    }
+
+    if (filtered.length === 0) {
+        const filterLabel = state.sourceFilter === 'gdrive' ? 'Google Drive' : 'pCloud'
+        gallery.innerHTML = `<p class="empty-msg">No files found exclusively in ${filterLabel}.<br><small>Connect GDrive or check your index.</small></p>`
+        return
+    }
+
+    const sorted = [...filtered].sort((a, b) => {
         if (a.isfolder !== b.isfolder) return a.isfolder ? -1 : 1
         return a.name.localeCompare(b.name)
     })

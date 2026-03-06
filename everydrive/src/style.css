@@ -94,6 +94,28 @@ body {
     font-size: 1.1rem;
 }
 
+.sidebar-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.07);
+    margin: 10px 4px;
+}
+
+.sidebar-section-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    padding: 0 16px 4px;
+    opacity: 0.6;
+}
+
+/* Source filter active uses a different accent tint */
+.source-filter.active {
+    color: #a78bfa;
+    background: rgba(167, 139, 250, 0.12);
+}
+
 /* ── Main Layout ── */
 .main-layout {
     flex: 1;
