@@ -45,8 +45,14 @@ module.exports = async function handler(req, res) {
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
-        console.error('[auth-google] Missing credentials on server.');
-        return res.status(500).send('Server configuration error: Missing Google Credentials');
+        let missing = [];
+        if (!clientId) missing.push('VITE_GOOGLE_CLIENT_ID');
+        if (!clientSecret) missing.push('GOOGLE_CLIENT_SECRET');
+        console.error(`[auth-google] Missing credentials: ${missing.join(', ')}`);
+        return res.status(500).json({
+            error: 'server_config_error',
+            error_description: `Missing environment variables on Vercel: ${missing.join(', ')}`
+        });
     }
 
     const params = new URLSearchParams();
