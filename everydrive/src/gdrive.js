@@ -16,12 +16,25 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 const SCOPE = 'https://www.googleapis.com/auth/drive.readonly'
 const INDEX_KEY = 'gdrive_index_v2'    // v2: stores {name, id} map
 const TOKEN_KEY = 'gdrive_token'
+const REFRESH_TOKEN_KEY = 'gdrive_refresh_token'
+const TOKEN_EXPIRY_KEY = 'gdrive_token_expiry'
 
 // ── Token management ──────────────────────────────────────────────────────────
 export function getGDriveToken() { return localStorage.getItem(TOKEN_KEY) }
 export function clearGDriveToken() {
     localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
+    localStorage.removeItem(TOKEN_EXPIRY_KEY)
     localStorage.removeItem(INDEX_KEY)
+}
+
+/**
+ * Check if the current token is expired or about to expire (within 5 mins)
+ */
+export function isTokenExpired() {
+    const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY)
+    if (!expiry) return true
+    return Date.now() > (Number(expiry) - 5 * 60 * 1000)
 }
 
 // ── OAuth ─────────────────────────────────────────────────────────────────────
@@ -32,18 +45,38 @@ export function connectGDrive() {
             return
         }
 
+        async function handleCodeResponse(resp) {
+            if (resp.code) {
+                try {
+                    // Exchange code for Refresh Token via our secure serverless function
+                    const passcode = localStorage.getItem('everydrive_passcode') || ''
+                    const res = await fetch(`/api/auth-google?code=${resp.code}&passcode=${encodeURIComponent(passcode)}`)
+                    const data = await res.json()
+
+                    if (data.error) throw new Error(data.error_description || data.error)
+
+                    localStorage.setItem(TOKEN_KEY, data.access_token)
+                    if (data.refresh_token) localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token)
+                    localStorage.setItem(TOKEN_EXPIRY_KEY, Date.now() + (data.expires_in * 1000))
+
+                    resolve(data.access_token)
+                } catch (e) {
+                    reject(e)
+                }
+            } else {
+                reject(new Error('No authorization code returned from Google.'))
+            }
+        }
+
         function initClient() {
             /* global google */
-            const client = google.accounts.oauth2.initTokenClient({
+            const client = google.accounts.oauth2.initCodeClient({
                 client_id: CLIENT_ID,
                 scope: SCOPE,
-                callback: (resp) => {
-                    if (resp.error) { reject(new Error(resp.error)); return }
-                    localStorage.setItem(TOKEN_KEY, resp.access_token)
-                    resolve(resp.access_token)
-                }
+                ux_mode: 'popup',
+                callback: handleCodeResponse
             })
-            client.requestAccessToken()
+            client.requestCode()
         }
 
         if (typeof google !== 'undefined' && google?.accounts?.oauth2) {
@@ -56,6 +89,32 @@ export function connectGDrive() {
             document.head.appendChild(script)
         }
     })
+}
+
+/**
+ * Silently refresh the access token using the stored refresh token.
+ */
+export async function refreshGDriveToken() {
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
+    if (!refreshToken) return null
+
+    try {
+        const passcode = localStorage.getItem('everydrive_passcode') || ''
+        const res = await fetch(`/api/auth-google?refresh_token=${refreshToken}&passcode=${encodeURIComponent(passcode)}`)
+        const data = await res.json()
+
+        if (data.error) {
+            if (data.error === 'invalid_grant') clearGDriveToken()
+            throw new Error(data.error_description || data.error)
+        }
+
+        localStorage.setItem(TOKEN_KEY, data.access_token)
+        localStorage.setItem(TOKEN_EXPIRY_KEY, Date.now() + (data.expires_in * 1000))
+        return data.access_token
+    } catch (e) {
+        console.error('[everyDrive] Failed to refresh GDrive token:', e)
+        return null
+    }
 }
 
 // ── File Index (v2: Map of lowercase filename → fileId) ───────────────────────

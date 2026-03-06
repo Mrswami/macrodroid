@@ -5,8 +5,8 @@ import {
     listFolder, searchFiles, getFileLink, getVideoLink, getThumbUrl
 } from './pcloud.js'
 import {
-    getGDriveToken, clearGDriveToken,
-    connectGDrive, buildGDriveIndex, loadCachedIndex,
+    getGDriveToken, clearGDriveToken, isTokenExpired,
+    connectGDrive, refreshGDriveToken, buildGDriveIndex, loadCachedIndex,
     isInGDrive, getGDriveFileId, getGDriveStreamUrl
 } from './gdrive.js'
 
@@ -49,6 +49,15 @@ async function init() {
         // Handle routing via hash
         window.onhashchange = handleRouting
         await handleRouting()
+
+        // Phase 4: Silent GDrive refresh check every minute
+        setInterval(async () => {
+            if (getGDriveToken() && isTokenExpired()) {
+                console.log('[everyDrive] GDrive token expired, refreshing...')
+                await refreshGDriveToken()
+                renderConnectedUI() // Update badge if needed
+            }
+        }, 60000)
     } else {
         sidebar.classList.add('hidden')
         renderLoginPage()
@@ -166,7 +175,7 @@ function renderConnectedUI() {
       <div class="user-badge">
         <span>🔒 pCloud</span>
         ${gConnected
-            ? `<span class="gdrive-connected-pill">✅ GDrive</span>
+            ? `<span class="gdrive-connected-pill" title="Persistent Lifetime Login Active">✅ GDrive (Lifetime)</span>
                <button id="sync-gdrive-btn" class="btn-ghost btn-sm" title="Refresh GDrive file index">↻ Sync</button>`
             : `<button id="connect-gdrive-btn" class="btn-ghost btn-sm">🔗 Connect GDrive</button>`
         }
