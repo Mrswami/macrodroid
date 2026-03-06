@@ -9,7 +9,7 @@
             "destination": "https://eapi.pcloud.com/:path*"
         },
         {
-            "source": "/(.*)",
+            "source": "/((?!api/|pcloud-us/|pcloud-eu/).*)",
             "destination": "/index.html"
         }
     ],
