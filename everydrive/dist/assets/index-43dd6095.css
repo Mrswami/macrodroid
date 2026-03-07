@@ -1,0 +1,1 @@
+@tailwind base;@tailwind components;@tailwind utilities;@layer base{body{@apply bg-bg text-white font-sans antialiased overflow-x-hidden;}}.glass{@apply bg-surface/80 backdrop-blur-xl border-r border-white/5;}.card-glass{@apply bg-surface/40 backdrop-blur-md border border-white/5 hover:border-white/10 transition-all;}

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>everyDrive — Combined Cloud Browser</title>
+  <meta name="description" content="everyDrive — Highly private combined cloud browser" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="/src/style.css" />
+  <meta name="referrer" content="no-referrer" />
+</head>
+
+<body>
+  <div id="locker" class="locker-overlay hidden">
+    <div class="locker-card">
+      <div class="logo">every<span>Drive</span></div>
+      <h2>Secure Locker</h2>
+      <p>Enter your passcode to unlock your drive.</p>
+      <input type="password" id="passcode-input" placeholder="••••" maxlength="8" autofocus />
+      <div id="locker-error" class="error-text hidden">Invalid Passcode</div>
+      <button id="unlock-btn" class="btn-primary">Unlock</button>
+    </div>
+  </div>
+  <div id="app">
+    <aside id="sidebar" class="sidebar hidden">
+      <div class="sidebar-header">
+        <div class="logo">every<span>Drive</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="folders">
+          <span class="nav-icon">📁</span> My Drive
+        </button>
+        <button class="nav-item" data-view="recent">
+          <span class="nav-icon">🕒</span> Recent
+        </button>
+        <button class="nav-item" data-view="photos">
+          <span class="nav-icon">📸</span> Photos
+        </button>
+        <button class="nav-item" data-view="videos">
+          <span class="nav-icon">🎬</span> Videos
+        </button>
+        <button class="nav-item" data-view="duplicates">
+          <span class="nav-icon">👯</span> Duplicates
+        </button>
+
+        <div class="sidebar-divider"></div>
+        <p class="sidebar-section-label">Filter by Source</p>
+
+        <button class="nav-item source-filter" data-source="all" id="filter-all">
+          <span class="nav-icon">☁️</span> All Files
+        </button>
+        <button class="nav-item source-filter" data-source="pcloud" id="filter-pcloud">
+          <span class="nav-icon">🟣</span> pCloud Only
+        </button>
+        <button class="nav-item source-filter" data-source="gdrive" id="filter-gdrive">
+          <span class="nav-icon">🔵</span> GDrive Only
+        </button>
+      </nav>
+    </aside>
+
+    <div class="main-layout">
+      <header class="app-header">
+        <div id="breadcrumb" class="breadcrumb"></div>
+        <div id="auth-status"></div>
+      </header>
+
+      <main id="content">
+        <div id="loader" class="loader-overlay hidden">
+          <div class="loader"></div>
+        </div>
+        <div id="gallery" class="grid-container"></div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
