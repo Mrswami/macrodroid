@@ -35,9 +35,9 @@ const Sidebar = () => {
                         <button
                             key={item.id}
                             onClick={() => setView(item.id)}
-                            className={`w-100 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${view === item.id
-                                    ? 'bg-accent/10 text-accent'
-                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${view === item.id
+                                ? 'bg-accent/10 text-accent'
+                                : 'text-slate-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             <item.icon size={18} />
@@ -55,9 +55,9 @@ const Sidebar = () => {
                             <button
                                 key={filter.id}
                                 onClick={() => setSourceFilter(filter.id)}
-                                className={`w-100 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${sourceFilter === filter.id
-                                        ? 'bg-white/5 text-white'
-                                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${sourceFilter === filter.id
+                                    ? 'bg-white/5 text-white'
+                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                                     }`}
                             >
                                 <filter.icon size={18} className={filter.color} />
@@ -71,7 +71,7 @@ const Sidebar = () => {
             <div className="p-4 border-t border-white/5">
                 <button
                     onClick={clearAll}
-                    className="w-100 px-4 py-3 text-xs text-slate-500 hover:text-white transition-colors"
+                    className="w-full px-4 py-3 text-xs text-slate-500 hover:text-white transition-colors"
                 >
                     Logout Cloud Services
                 </button>
